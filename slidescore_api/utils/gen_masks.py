@@ -315,59 +315,59 @@ def format_anns_for_db(anns):
 
     return annotations
 
-def generate_masks(path_to_slide, slidename, anns, MPP, classname, shape, visualize=False):
+def generate_masks(path_to_slide, slidename, anns, author, mpp, classname, shape, visualize=False, validation=False):
+    """Generate binary masks for annotated slidescore images using dlup
+    Input Parameters
+    1. path_to_slide --> This is the folder path where the .svs file is saved.
+    2. slidename --> The anonymized name of the whole slide image
+    3. anns --> A dictionary object containing all annotations of a study from slidescore
+    4. scaling --> Desired scaling factor with respect to level 0 of WSI.
+    5. classname --> The tissue class for which you want to generate the masks
+    6. shape --> The shape of the annotation (one of brush, ellipse, polygon, rect, points)
+    7. visualize --> Flag indicating if visualization of annotations is necessary. Default: False.
+    Output
+    1. A PIL image containing the binary mask (Image Mode -- "L")"""
 
-	""" Generate binary masks for annotated slidescore images using dlup
+    # TODO: Input a text file containing the image paths instead of parsing folder structure on the go.
+    slide_image = SlideImage.from_file_path(path_to_slide)
+    real_width, real_height = slide_image.size
+    scaled_slide_image = slide_image.get_scaled_view(slide_image.get_scaling(mpp))
+    scaled_width, scaled_height = scaled_slide_image.size
+    histo_img = scaled_slide_image.read_region((0, 0), (int(scaled_width)-1, int(scaled_height)-1))
+    histo_img = Image.fromarray(histo_img).convert("RGB")
+    mask = Image.new("L", (scaled_width, scaled_height))
+    if validation is False:
+        mycoordslist = []
+        for key in anns.keys():
+            if anns[key]["author"] == author:
+                if anns[key]["slidename"] == slidename:
+                    if anns[key]["label"] == classname:
+                        for i in range(len(anns[key]["data"])):
+                            if anns[key]["data"][i]["type"] in shape:
+                                if len(anns[key]["data"][i]["points"]) > 0:
+                                    blob = [list(x.exterior.coords) for x in anns[key]["data"][i]["points"].geoms]
+                                    if blob not in mycoordslist:
+                                        mycoordslist.append(blob)
 
-	Input Parameters
-		1. path_to_slide --> This is the folder path where the .svs file is saved.
-		2. slidename --> The anonymised name of the whole slide image
-		3. anns --> A dictionary object containing all annotations of a study from slidescore
-		4. MPP --> the target MPP at which you want to use your images
-		5. classname --> The tissue class for which you want to generate the masks
-		6. shape --> The shape of the annotation (one of brush, ellipse, polygon, rect, points)
-		7. visualize --> Flag indicating if visulization of annotations is necessary. Default: False.
+        polygons = []
+        maskDraw = ImageDraw.Draw(mask)
+        if len(mycoordslist) > 0:
+            for element in mycoordslist:
+                xy = []
+                for coord in element[0]:
+                    coord = list(coord)
+                    coord[0] = coord[0] * scaled_width / real_width
+                    coord[1] = coord[1] * scaled_height / real_height
+                    coord = tuple(coord)
+                    xy.append(coord)
+                maskDraw.polygon(xy, fill=255)
+                polygons.append(xy)
 
-	Output
-		1. A PIL image containing the binary mask (Image Mode -- "1") 
-	"""
-
-    INPUT_FILE_PATH = path_to_slide + slidename + ".svs"
-    ANNOTATIONS = anns
-    TARGET_MPP = MPP
-    
-    slide_image = SlideImage.from_file_path(INPUT_FILE_PATH)
-    props = slide_image.properties
-    scaled_region_view = slide_image.get_scaled_view(slide_image.get_scaling(TARGET_MPP))
-    histo_img = slide_image.thumbnail
-    real_width, real_height = float(props['aperio.OriginalHeight']), float(props['aperio.OriginalWidth'])
-    histo_img = Image.fromarray(histo_img)
-    scaled_width,scaled_height = histo_img.size
-    
-    mycoordslist = []
-    for key in anns.keys():
-        if anns[key]['slidename'] == slidename:
-            if anns[key]['label'] == classname:
-                if anns[key]['data'][0]['type'] == shape:
-                    mycoordslist = [list(x.exterior.coords) for x in anns[key]['data'][0]['points'].geoms]
-                    mycoordslist = mycoordslist[0]
-
-    xy = []
-    mask = Image.new("1", (scaled_width,scaled_height))
-    maskDraw = ImageDraw.Draw(mask)
-    if len(mycoordslist) > 0:
-        for coord in mycoordslist:
-            coord = list(coord)
-            coord[0] = coord[0]*scaled_width/real_width
-            coord[1] = coord[1]*scaled_height/real_height
-            coord = tuple(coord)
-            xy.append(coord)
-        maskDraw.polygon(xy, fill=255)
-        
     if visualize:
-        contourDraw = ImageDraw.Draw(histo_img)
-        if len(xy) > 0:
-            contourDraw.polygon(xy, outline='blue')
-        histo_img.show()
-
-    return mask
+        if validation is False:
+            contour_draw = ImageDraw.Draw(histo_img)
+            for polygon in polygons:
+                contour_draw.polygon(polygon, outline="blue")
+                mask.save(f"/home/a.karkala/mask.png")
+        histo_img.save(f"/home/a.karkala/thumbnail.png")
+    return mask, histo_img

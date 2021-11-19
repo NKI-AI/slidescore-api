@@ -1,14 +1,15 @@
+# coding=utf-8
 # TODO: Parse function must be able to return None, and check before adding
 
-from annparser import *
-from dlup import SlideImage
-from PIL import Image, ImageDraw
-import numpy as np
-import sys
 import json
 from pathlib import Path
 from typing import Dict, Union
+
+import numpy as np
+from dlup import SlideImage
+from PIL import Image, ImageDraw
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon
+
 
 def parse_brush_annotation(ann):
     # returns points: MultiPolygon
@@ -121,16 +122,11 @@ PARSE_FNS = {
 }
 
 
-def read_slidescore_annotations(
-    fname: Union[str, Path], filter_empty=True
-) -> Dict[int, Dict]:
+def read_slidescore_annotations(fname: Union[str, Path], filter_empty=True) -> Dict[int, Dict]:
     """Function to convert slidescore annotations (txt file) to dictionary.
-
     Reads text file imported from slidescore into a dictionary with rows which are dicts with keys:
         row_idx: {imageID, slidename, author, label, data}
-
     NOTE: `row_idx` need not be sequential and is mapped to the original idx in the text file.
-
     Data is stored based on the type, accessed using `data["type"]`:
         brush: type (str), positive_polygons (ndarray) , negative_polygons (ndarray)
         polygon: type (str), points (ndarray)
@@ -171,9 +167,7 @@ def read_slidescore_annotations(
                     data[0] = PARSE_FNS["points"](ann)
 
                 else:
-                    raise NotImplementedError(
-                        f"label_type ( {label_type} ) not implemented."
-                    )
+                    raise NotImplementedError(f"label_type ( {label_type} ) not implemented.")
 
             elif filter_empty:
                 num_empty += 1
@@ -257,9 +251,7 @@ def format_anns_for_db(anns):
                 x1, y1 = _data["corner"].x, _data["corner"].y
                 x2, y2 = x1 + w, y1 + h
                 _ann["gtype"] = "MULTIPOLYGON"
-                _ann["geom"] = MultiPolygon(
-                    [Polygon([[x1, y1], [x1, y2], [x2, y2], [x2, y1]])]
-                )
+                _ann["geom"] = MultiPolygon([Polygon([[x1, y1], [x1, y2], [x2, y2], [x2, y1]])])
                 _ann["center_x"] = (x2 + x1) / 2
                 _ann["center_y"] = (y2 + y1) / 2
                 _ann["corner_x"] = x1
@@ -288,9 +280,7 @@ def format_anns_for_db(anns):
                 x1, y1 = x0 - w / 2, y0 - w / 2
                 x2, y2 = x0 + w / 2, y0 + w / 2
                 _ann["gtype"] = "MULTIPOLYGON"
-                _ann["geom"] = MultiPolygon(
-                    [Polygon([[x1, y1], [x1, y2], [x2, y2], [x2, y1]])]
-                )
+                _ann["geom"] = MultiPolygon([Polygon([[x1, y1], [x1, y2], [x2, y2], [x2, y1]])])
                 _ann["center_x"] = (x2 + x1) / 2
                 _ann["center_y"] = (y2 + y1) / 2
                 _ann["corner_x"] = x1
@@ -315,6 +305,7 @@ def format_anns_for_db(anns):
 
     return annotations
 
+
 def generate_masks(path_to_slide, slidename, anns, author, mpp, classname, shape, visualize=False, validation=False):
     """Generate binary masks for annotated slidescore images using dlup
     Input Parameters
@@ -333,7 +324,7 @@ def generate_masks(path_to_slide, slidename, anns, author, mpp, classname, shape
     real_width, real_height = slide_image.size
     scaled_slide_image = slide_image.get_scaled_view(slide_image.get_scaling(mpp))
     scaled_width, scaled_height = scaled_slide_image.size
-    histo_img = scaled_slide_image.read_region((0, 0), (int(scaled_width)-1, int(scaled_height)-1))
+    histo_img = scaled_slide_image.read_region((0, 0), (int(scaled_width) - 1, int(scaled_height) - 1))
     histo_img = Image.fromarray(histo_img).convert("RGB")
     mask = Image.new("L", (scaled_width, scaled_height))
     if validation is False:

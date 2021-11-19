@@ -312,10 +312,9 @@ def generate_masks(path_to_slide, slidename, anns, author, mpp, classname, shape
     1. path_to_slide --> This is the folder path where the .svs file is saved.
     2. slidename --> The anonymized name of the whole slide image
     3. anns --> A dictionary object containing all annotations of a study from slidescore
-    4. scaling --> Desired scaling factor with respect to level 0 of WSI.
-    5. classname --> The tissue class for which you want to generate the masks
-    6. shape --> The shape of the annotation (one of brush, ellipse, polygon, rect, points)
-    7. visualize --> Flag indicating if visualization of annotations is necessary. Default: False.
+    4. classname --> The tissue class for which you want to generate the masks
+    5. shape --> The shape of the annotation (one of brush, ellipse, polygon, rect, points)
+    6. visualize --> Flag indicating if visualization of annotations is necessary. Default: False.
     Output
     1. A PIL image containing the binary mask (Image Mode -- "L")"""
 

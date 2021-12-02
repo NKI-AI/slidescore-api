@@ -305,59 +305,94 @@ def format_anns_for_db(anns):
 
     return annotations
 
+def read_wsi(path_to_slide, mpp):
+    """Read a WSI file from a given path string at a particular mpp resolution.
 
-def generate_masks(path_to_slide, slidename, anns, author, mpp, classname, shape, visualize=False, validation=False):
-    """Generate binary masks for annotated slidescore images using dlup
-    Input Parameters
-    1. path_to_slide --> This is the folder path where the .svs file is saved.
-    2. slidename --> The anonymized name of the whole slide image
-    3. anns --> A dictionary object containing all annotations of a study from slidescore
-    4. classname --> The tissue class for which you want to generate the masks
-    5. shape --> The shape of the annotation (one of brush, ellipse, polygon, rect, points)
-    6. visualize --> Flag indicating if visualization of annotations is necessary. Default: False.
-    Output
-    1. A PIL image containing the binary mask (Image Mode -- "L")"""
+    Input:
+        1. path_to_slide: String variable pointing to the path of WSI.
+        2. mpp: The resolution at which the WSI must be read.
 
-    # TODO: Input a text file containing the image paths instead of parsing folder structure on the go.
-    slide_image = SlideImage.from_file_path(path_to_slide)
-    real_width, real_height = slide_image.size
+    Output:
+        1. histo_img: The WSI image at the required mpp level as a PIL object (Image Mode -- "RGB")..
+        2. real_dims: The dimensions of the WSI at full resolution.
+        3. scaled_dims: The dimensions of the WSI after scaling to required mpp."""
+    slide_image = SlideImage.from_file_path(Path(path_to_slide))
+    real_dims = slide_image.size
     scaled_slide_image = slide_image.get_scaled_view(slide_image.get_scaling(mpp))
-    scaled_width, scaled_height = scaled_slide_image.size
-    histo_img = scaled_slide_image.read_region((0, 0), (int(scaled_width) - 1, int(scaled_height) - 1))
-    histo_img = Image.fromarray(histo_img).convert("RGB")
-    mask = Image.new("L", (scaled_width, scaled_height))
-    if validation is False:
-        mycoordslist = []
-        for key in anns.keys():
-            if anns[key]["author"] == author:
-                if anns[key]["slidename"] == slidename:
-                    if anns[key]["label"] == classname:
-                        for i in range(len(anns[key]["data"])):
-                            if anns[key]["data"][i]["type"] in shape:
-                                if len(anns[key]["data"][i]["points"]) > 0:
-                                    blob = [list(x.exterior.coords) for x in anns[key]["data"][i]["points"].geoms]
-                                    if blob not in mycoordslist:
-                                        mycoordslist.append(blob)
+    scaled_dims = scaled_slide_image.size
+    histo_img = scaled_slide_image.read_region((0, 0), (int(scaled_dims[0]) - 1, int(scaled_dims[1]) - 1))
+    histo_img = histo_img.convert("RGB")
+    return histo_img, scaled_dims, real_dims
 
-        polygons = []
-        maskDraw = ImageDraw.Draw(mask)
-        if len(mycoordslist) > 0:
-            for element in mycoordslist:
-                xy = []
-                for coord in element[0]:
-                    coord = list(coord)
-                    coord[0] = coord[0] * scaled_width / real_width
-                    coord[1] = coord[1] * scaled_height / real_height
-                    coord = tuple(coord)
-                    xy.append(coord)
-                maskDraw.polygon(xy, fill=255)
-                polygons.append(xy)
+def preprocess_anns(anns, label, author, ann_type):
+    """Preprocess the slidescore annotation file for a study for faster access during training"""
+    preprocessed_annotations = {}
+    for key in anns.keys():
+        if anns[key]["author"] == author:
+            if anns[key]["label"] == label:
+                for i in range(len(anns[key]["data"])):
+                    if anns[key]["data"][i]["type"] in ann_type:
+                        slide_name = anns[key]["slidename"]
+                        preprocessed_annotations[slide_name] = {label: anns[key]["data"][i]["points"]}
+    return preprocessed_annotations
 
-    if visualize:
-        if validation is False:
-            contour_draw = ImageDraw.Draw(histo_img)
-            for polygon in polygons:
-                contour_draw.polygon(polygon, outline="blue")
-                mask.save(f"/home/a.karkala/mask.png")
-        histo_img.save(f"/home/a.karkala/thumbnail.png")
-    return mask, histo_img
+def get_ann_coords(anns, ann_attr):
+    """Get the coorinates for the points in the annotation files. Filter for annotation author, slide name, class label
+       and type of Annotation.
+
+    Input:
+        1. anns: Dictionary object containing all the annotations from some slidescore study.
+        2. ann_attr: Dictionary object containing the attributes of the annotations.
+
+    Output:
+        1. mycoordslist: A list containing all the annotation points for a particular class label by a particular author.
+        """
+    slidename = ann_attr["slidename"]
+    label = ann_attr["classname"]
+    mycoordslist = []
+    if len(anns[slidename]) > 0:
+        blob = [list(x.exterior.coords) for x in anns[slidename][label].geoms]
+        if blob not in mycoordslist:
+            mycoordslist.append(blob)
+    return mycoordslist
+
+def get_mask(coords, scaled_dims, real_dims):
+    """Generate the annotation masks from the annotation points marked for a WSI.
+
+    Input:
+        1. coords: A list of annotation co-ordinates.
+        2. scaled_dims: The dimensions of the WSI after scaling to required mpp.
+        3. real_dims: The dimensions of the WSI at full resolution."""
+    mask = Image.new("L", (scaled_dims[0], scaled_dims[1]))
+    mask_draw = ImageDraw.Draw(mask)
+    if len(coords) > 0:
+        for element in coords:
+            xy = []
+            for coord in element[0]:
+                coord = list(coord)
+                coord[0] = coord[0] * scaled_dims[0] / real_dims[0]
+                coord[1] = coord[1] * scaled_dims[1] / real_dims[1]
+                coord = tuple(coord)
+                xy.append(coord)
+            mask_draw.polygon(xy, fill=255)
+    return mask
+
+
+def generate_masks(path_to_slide, slidename, anns, mpp, classname):
+    """Generate binary masks for annotated slidescore images using dlup
+    Input
+        path_to_slide --> This is the folder path where the .svs file is saved.
+        slidename --> The anonymized name of the whole slide image
+        anns --> A dictionary object containing preprocessed annotations of a study from slidescore. 
+        Use preprocess_anns() inside data.Dataset() class while initializing to preprocess the annotations.
+        author --> Name of the author whose annotations are needed.
+        mpp --> Desired mpp level to read the WSI.
+        classname --> The class name for which you want to generate the masks (example: "specimen", "tumor" etc)
+        shape --> The shape of the annotation (one of brush, ellipse, polygon, rect, points)
+    Output
+        A PIL image containing the whole slide image (Image Mode -- "RGB").
+        A PIL image containing the binary mask (Image Mode -- "L")."""
+    wsi, scaled_dims, real_dims = read_wsi(path_to_slide, mpp)
+    coords = get_ann_coords(anns, {"slidename":slidename, "classname":classname})
+    mask = get_mask(coords=coords, scaled_dims=scaled_dims, real_dims=real_dims)
+    return mask, wsi

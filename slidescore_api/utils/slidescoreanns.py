@@ -1,18 +1,16 @@
+#!/home/ajey/miniconda3/bin/python3
 # coding=utf-8
 # TODO: Parse function must be able to return None, and check before adding
 
 import json
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict
 
 import numpy as np
-from dlup import SlideImage
-from PIL import Image, ImageDraw
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon
 
 
 class SlideScoreAnns(object):
-
     def __init__(self, filename: str, mpp: float):
         self.filename = filename
 
@@ -60,7 +58,6 @@ class SlideScoreAnns(object):
         }
         return data
 
-
     def parse_polygon_annotation(self, ann: dict) -> dict:
         # returns points: MultiPolygon
         points = np.array([[pt["x"], pt["y"]] for pt in ann["points"]], dtype=np.float32)
@@ -74,7 +71,6 @@ class SlideScoreAnns(object):
             "points": points,
         }
         return data
-
 
     def parse_ellipse_annotation(self, ann: dict) -> dict:
         # returns center: Point, size: Point
@@ -95,7 +91,6 @@ class SlideScoreAnns(object):
             }
         return data
 
-
     def parse_rect_annotation(self, ann: dict) -> dict:
         # returns corner: Point, size: Point
         corner = np.array([ann["corner"]["x"], ann["corner"]["y"]], dtype=np.float32)
@@ -107,7 +102,6 @@ class SlideScoreAnns(object):
         }
         return data
 
-
     def parse_points_annotation(self, ann: dict) -> dict:
         # returns points: MultiPoint
         points = np.array([[_ann["x"], _ann["y"]] for _ann in ann], dtype=np.float32)
@@ -116,7 +110,6 @@ class SlideScoreAnns(object):
             "points": MultiPoint(points),
         }
         return data
-
 
     def read_slidescore_annotations(self, filter_empty=True) -> Dict[int, Dict]:
         """Function to convert slidescore annotations (txt file) to dictionary.
@@ -196,7 +189,6 @@ class SlideScoreAnns(object):
         ), f"Some rows were missed. \nParsed: {len(anns) + num_empty}, Read: {num_entries}"
 
         return anns
-
 
     def format_anns_for_db(self, anns):
         """Function to convert dictionary of slidescore annotations (dict) to rows for adding to database."""
@@ -330,7 +322,7 @@ class SlideScoreAnns(object):
 
         Output:
             1. mycoordslist: A list containing all the annotation points for a particular class label by a particular author.
-            """
+        """
         mycoordslist = []
         if anns is not None:
             slidename = ann_attr["slidename"]

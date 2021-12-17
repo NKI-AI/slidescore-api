@@ -201,7 +201,7 @@ def download_labels(
             )
 
         # Now save this to JSON.
-        with open(save_dir / f"{image_id}.json") as file:
+        with open(save_dir / f"{image_id}.json", "w") as file:
             json.dump(annotation_data, file, indent=2)
 
 

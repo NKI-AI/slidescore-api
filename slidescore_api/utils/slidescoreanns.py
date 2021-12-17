@@ -3,17 +3,18 @@
 # TODO: Parse function must be able to return None, and check before adding
 
 import json
+import pathlib
 import pickle
 from pathlib import Path
 from typing import Dict
-
 import numpy as np
-from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon
+from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
 
 
 class SlideScoreAnns(object):
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, study_id: str):
         self.filename = filename
+        self.study_id = study_id
 
     def parse_brush_annotation(self, ann: dict) -> dict:
         # returns points: MultiPolygon
@@ -191,21 +192,27 @@ class SlideScoreAnns(object):
 
         return anns
 
-    def filter_anns(self, anns, label, author, ann_type, save=False):
+    def save_shapely(self, anns: dict, label: str, author:str, ann_type:list):
+        for key in anns.keys():
+            if anns[key]["author"] == author and anns[key]["label"] == label:
+                slide_name = anns[key]["slidename"]
+                save_path = self.study_id + "/" + "annotations" + "/" + slide_name + "/"
+                Path(save_path).mkdir(parents=True, exist_ok=True)
+                file = open(save_path + label + ".json", "w")
+                for i in range(len(anns[key]["data"])):
+                    if anns[key]["data"][i]["type"] in ann_type and len(anns[key]["data"][i]["points"]) > 0:
+                            json.dump(mapping(anns[key]["data"][i]["points"]),file, indent=2)
+
+    def filter_anns(self, anns, label, author, ann_type):
         preprocessed_annotations = {}
         for key in anns.keys():
-            if anns[key]["author"] == author:
-                if anns[key]["label"] == label:
-                    slide_name = anns[key]["slidename"]
-                    preprocessed_annotations[slide_name] = {}
-                    preprocessed_annotations[slide_name][label] = {}
-                    for i in range(len(anns[key]["data"])):
-                        if anns[key]["data"][i]["type"] in ann_type:
-                            preprocessed_annotations[slide_name][label][i] = anns[key]["data"][i]["points"]
-        if save:
-            file = open("annotations.pkl", "wb")
-            pickle.dump(preprocessed_annotations, file)
-            file.close()
+            if anns[key]["author"] == author and anns[key]["label"] == label:
+                slide_name = anns[key]["slidename"]
+                preprocessed_annotations[slide_name] = {}
+                preprocessed_annotations[slide_name][anns[key]["label"]] = {}
+                for i in range(len(anns[key]["data"])):
+                    if anns[key]["data"][i]["type"] in ann_type and len(anns[key]["data"][i]["points"]) > 0:
+                        preprocessed_annotations[slide_name][label][i] = anns[key]["data"][i]["points"]
         return preprocessed_annotations
 
     def get_ann_coords(self, anns, ann_attr, save=False):

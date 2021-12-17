@@ -217,7 +217,7 @@ def _download_labels(args: argparse.Namespace) -> None:
     -------
     None
     """
-    build_cli_logger("download_labels", log_to_file=not args.no_log, verbosity_level=args.verbose)
+    # build_cli_logger("download_labels", log_to_file=not args.no_log, verbosity_level=args.verbose)
     api_token = parse_api_token(args.token_path)
     download_labels(
         args.slidescore_url,

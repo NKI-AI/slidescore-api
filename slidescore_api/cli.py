@@ -10,12 +10,10 @@ import sys
 import typing
 from pathlib import Path
 from typing import Optional
-
 from tqdm import tqdm
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client
-from slidescore_api.logging import build_cli_logger
-
+from slidescore_api.utils.slidescoreanns import SlideScoreAnns
 PathLike = typing.Union[str, os.PathLike]
 
 logger = logging.getLogger(__name__)
@@ -130,6 +128,10 @@ def retrieve_questions(
     scores = config["scores"]
     return scores
 
+def write_shapely_to_disc(slidescore_anns_file: PathLike, study_id: str, author: str, label: str, ann_type: list):
+    reader = SlideScoreAnns(slidescore_anns_file, study_id)
+    anns = reader.read_slidescore_annotations()
+    reader.save_shapely(anns=anns, label=label, author=author, ann_type=ann_type)
 
 def download_labels(
     slidescore_url: str,
@@ -229,6 +231,9 @@ def _download_labels(args: argparse.Namespace) -> None:
         disable_certificate_check=args.disable_certificate_check,
     )
 
+def _write_shapely_to_disc(args: argparse.Namespace) -> None:
+    write_shapely_to_disc(args.ann_file, str(args.study_id), args.ann_user, args.ann_label, args.ann_type)
+
 
 def append_to_manifest(save_dir: pathlib.Path, image_id: int, filename: pathlib.Path) -> None:
     """
@@ -309,6 +314,16 @@ def _download_wsi(args: argparse.Namespace):
 
 def register_parser(parser: argparse._SubParsersAction):
     """Register slidescore commands to a root parser."""
+    # Write annotations as shapely files to disc
+    write_shapely_parser = parser.add_parser("write-shapely",
+                                             help="Given a slidescore annotation file, write shapely objects to disc")
+    write_shapely_parser.add_argument("ann_file", type=pathlib.Path, help="Path to read text annotation file")
+    write_shapely_parser.add_argument("ann_label", help="Name of the required class label", type=str)
+    write_shapely_parser.add_argument("ann_user", help="Email(-like) reference indicating submitted annotations on SlideScore.",
+                                      type=str)
+    write_shapely_parser.add_argument("ann_type", nargs= "*", type=str, help="list of required type of annotations", default=["brush", "polygon"])
+    write_shapely_parser.set_defaults(subcommand=_write_shapely_to_disc)
+
     # Download slides to a subfolder
     download_wsi_parser = parser.add_parser("download-wsis", help="Download WSIs from SlideScore.")
     download_wsi_parser.add_argument(

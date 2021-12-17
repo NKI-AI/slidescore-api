@@ -3,6 +3,7 @@
 # TODO: Parse function must be able to return None, and check before adding
 
 import json
+import pickle
 from pathlib import Path
 from typing import Dict
 
@@ -11,7 +12,7 @@ from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon
 
 
 class SlideScoreAnns(object):
-    def __init__(self, filename: str, mpp: float):
+    def __init__(self, filename: str):
         self.filename = filename
 
     def parse_brush_annotation(self, ann: dict) -> dict:
@@ -300,19 +301,24 @@ class SlideScoreAnns(object):
 
         return annotations
 
-    def filter_anns(self, anns, label, author, ann_type):
-        """Preprocess the slidescore annotation file for a study for faster access during training"""
+    def filter_anns(self, anns, label, author, ann_type, save=False):
         preprocessed_annotations = {}
         for key in anns.keys():
             if anns[key]["author"] == author:
                 if anns[key]["label"] == label:
+                    slide_name = anns[key]["slidename"]
+                    preprocessed_annotations[slide_name] = {}
+                    preprocessed_annotations[slide_name][label] = {}
                     for i in range(len(anns[key]["data"])):
                         if anns[key]["data"][i]["type"] in ann_type:
-                            slide_name = anns[key]["slidename"]
-                            preprocessed_annotations[slide_name] = {label: anns[key]["data"][i]["points"]}
+                            preprocessed_annotations[slide_name][label][i] = anns[key]["data"][i]["points"]
+        if save:
+            file = open("annotations.pkl", "wb")
+            pickle.dump(preprocessed_annotations, file)
+            file.close()
         return preprocessed_annotations
 
-    def get_ann_coords(self, anns, ann_attr):
+    def get_ann_coords(self, anns, ann_attr, save=False):
         """Get the coorinates for the points in the annotation files. Filter for annotation author, slide name, class label
            and type of Annotation.
 
@@ -332,4 +338,8 @@ class SlideScoreAnns(object):
                 blob.append([list(x.exterior.coords) for x in anns[slidename][label][i].geoms])
             if blob not in mycoordslist:
                 mycoordslist.append(blob)
+            if save:
+                file = open(slidename + ".pkl", "wb")
+                pickle.dump(mycoordslist, file)
+                file.close()
         return mycoordslist

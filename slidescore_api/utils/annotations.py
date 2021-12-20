@@ -7,6 +7,7 @@ import pickle
 import warnings
 from pathlib import Path
 from typing import Dict, Union, List
+from typing import NamedTuple
 
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
@@ -14,147 +15,198 @@ from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
 PathLike = Union[str, os.PathLike]
 
 
+class ImageAnnotation(NamedTuple):
+    image_id: str
+    slide_name: str
+    author: str
+    label: str
+    annotation: Dict[str, Union[str, Union[MultiPolygon, MultiPoint, Point, Polygon]]]
+
+
+def _parse_brush_annotation(annotations: Dict) -> Dict:
+    """
+
+    Parameters
+    ----------
+    annotations : dict
+
+    Returns
+    -------
+    dict
+        Dictionary with key type: "brush" and "points" a shapely.geometry.MultiplePolygon
+    """
+    positive_polygons = annotations["positivePolygons"]
+    negative_polygons = annotations["negativePolygons"]
+    positive_polygons = {
+        k: Polygon(np.array([[pt["x"], pt["y"]] for pt in polygon], dtype=np.float32))
+        for k, polygon in enumerate(positive_polygons)
+    }
+    negative_polygons = {
+        k: Polygon(np.array([[pt["x"], pt["y"]] for pt in polygon], dtype=np.float32))
+        for k, polygon in enumerate(negative_polygons)
+    }
+
+    # Check if any negative polygon is contained in a positive polygon
+    # TODO: Should strike out inners already taken to make it efficient
+    used_negatives = {idx: False for idx in negative_polygons}
+    inners_count = 0
+    polygons = []
+    for p_poly in positive_polygons.values():
+        inners = []
+        for idx, n_poly in negative_polygons.items():
+            if not used_negatives[idx]:
+                if n_poly.within(p_poly):
+                    inners.append(n_poly)
+                    used_negatives[idx] = True
+        inners_count += len(inners)
+        polygon = Polygon(p_poly, inners)
+        polygons.append(polygon)
+
+    if not len(negative_polygons) == inners_count:
+        warnings.warn(
+            f"Not all negative_polygons accounted for: {inners_count} / {len(negative_polygons)}.\n"
+            f"Indices :{[nidx for nidx, val in used_negatives.items() if not val]}.\n"
+            f"Polygons:{[([pt for pt in negative_polygons[idx].exterior.coords]) for nidx, val in used_negatives.items() if not val]}.\n"
+            f"Areas   :{[negative_polygons[nidx].area for nidx, val in used_negatives.items() if not val]}.\n"
+        )
+
+    points = MultiPolygon(polygons)
+    data = {
+        "type": "brush",
+        "points": points,
+    }
+    return data
+
+
+def _parse_polygon_annotation(annotations: Dict) -> Dict:
+    """
+
+    Parameters
+    ----------
+    annotations : dict
+
+    Returns
+    -------
+    dict
+        Dictionary with key type: "brush" and "points" a shapely.geometry.MultiplePolygon
+    """
+    # returns points: MultiPolygon
+    points = np.array([[pt["x"], pt["y"]] for pt in annotations["points"]], dtype=np.float32)
+    if len(points) < 3:
+        warnings.warn(f"Invalid polygon: {annotations}")
+        points = []
+    else:
+        points = MultiPolygon([Polygon(points)])
+    data = {
+        "type": "polygon",
+        "points": points,
+    }
+    return data
+
+
+def _parse_ellipse_annotation(annotations: Dict) -> Dict:
+    # returns center: Point, size: Point
+    if (annotations["center"]["x"] is not None) & (annotations["center"]["y"] is not None):
+        center = np.array([annotations["center"]["x"], annotations["center"]["y"]], dtype=np.float32)
+        size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
+        data = {
+            "type": "ellipse",
+            "center": Point(center),
+            "size": Point(size),
+        }
+    else:
+        warnings.warn(f"Invalid ellipse: {annotations['center'], annotations['size']}, adding as -1.")
+        data = {
+            "type": "ellipse",
+            "center": Point(-1, -1),
+            "size": Point(-1, -1),
+        }
+    return data
+
+
+def _parse_rect_annotation(annotations: Dict) -> Dict:
+    # returns corner: Point, size: Point
+    corner = np.array([annotations["corner"]["x"], annotations["corner"]["y"]], dtype=np.float32)
+    size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
+    data = {
+        "type": "rect",
+        "corner": Point(corner),
+        "size": Point(size),
+    }
+    return data
+
+
+def _parse_points_annotation(annotations: Dict) -> Dict:
+    # returns points: MultiPoint
+    points = np.array([[_ann["x"], _ann["y"]] for _ann in annotations], dtype=np.float32)
+    data = {
+        "type": "points",
+        "points": MultiPoint(points),
+    }
+    return data
+
+
 class SlideScoreAnnotations:
-    headers = ["ImageID", "Image Name", "By", "Question", "Answer"]
+    _headers = ["ImageID", "Image Name", "By", "Question", "Answer"]
+    _parse_fns = {
+        "brush": _parse_brush_annotation,
+        "ellipse": _parse_ellipse_annotation,
+        "polygon": _parse_polygon_annotation,
+        "rect": _parse_rect_annotation,
+        "points": _parse_points_annotation,
+    }
 
     def __init__(self, filename: PathLike, study_id: str):
         self.filename = filename
         self.study_id = study_id
         self.__annotations = None
 
-    @staticmethod
-    def _parse_brush_annotation(annotations: Dict) -> Dict:
-        """
-
-        Parameters
-        ----------
-        annotations : dict
-
-        Returns
-        -------
-        dict
-            Dictionary with key type: "brush" and "points" a shapely.geometry.MultiplePolygon
-        """
-        positive_polygons = annotations["positivePolygons"]
-        negative_polygons = annotations["negativePolygons"]
-        positive_polygons = {
-            k: Polygon(np.array([[pt["x"], pt["y"]] for pt in polygon], dtype=np.float32))
-            for k, polygon in enumerate(positive_polygons)
-        }
-        negative_polygons = {
-            k: Polygon(np.array([[pt["x"], pt["y"]] for pt in polygon], dtype=np.float32))
-            for k, polygon in enumerate(negative_polygons)
-        }
-
-        # Check if any negative polygon is contained in a positive polygon
-        # TODO: Should strike out inners already taken to make it efficient
-        used_negatives = {idx: False for idx in negative_polygons}
-        inners_count = 0
-        polygons = []
-        for p_poly in positive_polygons.values():
-            inners = []
-            for idx, n_poly in negative_polygons.items():
-                if not used_negatives[idx]:
-                    if n_poly.within(p_poly):
-                        inners.append(n_poly)
-                        used_negatives[idx] = True
-            inners_count += len(inners)
-            polygon = Polygon(p_poly, inners)
-            polygons.append(polygon)
-
-        if not len(negative_polygons) == inners_count:
-            warnings.warn(
-                f"Not all negative_polygons accounted for: {inners_count} / {len(negative_polygons)}.\n"
-                f"Indices :{[nidx for nidx, val in used_negatives.items() if not val]}.\n"
-                f"Polygons:{[([pt for pt in negative_polygons[idx].exterior.coords]) for nidx, val in used_negatives.items() if not val]}.\n"
-                f"Areas   :{[negative_polygons[nidx].area for nidx, val in used_negatives.items() if not val]}.\n"
-            )
-
-        points = MultiPolygon(polygons)
-        data = {
-            "type": "brush",
-            "points": points,
-        }
-        return data
-
-    @staticmethod
-    def _parse_polygon_annotation(annotations: Dict) -> Dict:
-        """
-
-        Parameters
-        ----------
-        annotations : dict
-
-        Returns
-        -------
-        dict
-            Dictionary with key type: "brush" and "points" a shapely.geometry.MultiplePolygon
-        """
-        # returns points: MultiPolygon
-        points = np.array([[pt["x"], pt["y"]] for pt in annotations["points"]], dtype=np.float32)
-        if len(points) < 3:
-            warnings.warn(f"Invalid polygon: {annotations}")
-            points = []
-        else:
-            points = MultiPolygon([Polygon(points)])
-        data = {
-            "type": "polygon",
-            "points": points,
-        }
-        return data
-
-    @staticmethod
-    def _parse_ellipse_annotation(annotations: Dict) -> Dict:
-        # returns center: Point, size: Point
-        if (annotations["center"]["x"] is not None) & (annotations["center"]["y"] is not None):
-            center = np.array([annotations["center"]["x"], annotations["center"]["y"]], dtype=np.float32)
-            size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
-            data = {
-                "type": "ellipse",
-                "center": Point(center),
-                "size": Point(size),
-            }
-        else:
-            warnings.warn(f"Invalid ellipse: {annotations['center'], annotations['size']}, adding as -1.")
-            data = {
-                "type": "ellipse",
-                "center": Point(-1, -1),
-                "size": Point(-1, -1),
-            }
-        return data
-
-    @staticmethod
-    def _parse_rect_annotation(annotations: Dict) -> Dict:
-        # returns corner: Point, size: Point
-        corner = np.array([annotations["corner"]["x"], annotations["corner"]["y"]], dtype=np.float32)
-        size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
-        data = {
-            "type": "rect",
-            "corner": Point(corner),
-            "size": Point(size),
-        }
-        return data
-
-    @staticmethod
-    def _parse_points_annotation(annotations: Dict) -> Dict:
-        # returns points: MultiPoint
-        points = np.array([[_ann["x"], _ann["y"]] for _ann in annotations], dtype=np.float32)
-        data = {
-            "type": "points",
-            "points": MultiPoint(points),
-        }
-        return data
-
     def read_annotation_file(self):
         filepath = Path(self.filename)
         entries = filepath.read_text().split("\n")[:-1]
         num_entries = len(entries) - 1
 
-        if not self.headers != entries[0].split("\t"):
+        if self._headers != entries[0].split("\t"):
             raise RuntimeError("Header is missing.")
 
         rows = entries[1:]
         return num_entries, rows
+
+    def _parse_annotation_row(self, row, filter_empty):
+        _row = {k: v for k, v in zip(self._headers, row.split("\t"))}
+        data = {}
+        try:
+            ann = json.loads(_row["Answer"])
+            if len(ann) > 0:
+                # Points dont have type, only x,y; so we use that to distinguish task
+                # Code can be shortened, but is more readable this way
+                if "type" in ann[0]:
+                    label_type = "segmentation"
+                else:
+                    label_type = "detection"
+
+                # Segmentation - Treat brush, polygon as MultiPolygon
+                if label_type == "segmentation":
+                    for idx, _ann in enumerate(ann):
+                        data[idx] = self._parse_fns[_ann["type"]](_ann)
+
+                # Detection - Treat points as MultiPoint
+                elif label_type == "detection":
+                    data[0] = self._parse_fns["points"](ann)
+
+                else:
+                    raise NotImplementedError(f"label_type ( {label_type} ) not implemented.")
+
+            elif filter_empty:
+                return None
+
+        except json.decoder.JSONDecodeError:
+            if len(_row["Answer"]) > 0:
+                data = {0: {"type": "comment", "text": _row["Answer"]}}
+            elif filter_empty:
+                return None
+
+        return _row, data
 
     def parse_annotations(self, filter_empty=True) -> None:
         """
@@ -180,66 +232,34 @@ class SlideScoreAnnotations:
         -------
 
         """
-        _parse_fns = {
-            "brush": self._parse_brush_annotation,
-            "ellipse": self._parse_ellipse_annotation,
-            "polygon": self._parse_polygon_annotation,
-            "rect": self._parse_rect_annotation,
-            "points": self._parse_points_annotation,
-        }
 
         num_empty = 0
         num_entries, rows = self.read_annotation_file()
 
         annotations = {}
         for row_idx, row in enumerate(rows):
-            _row = {k: v for k, v in zip(self.headers, row.split("\t"))}
-            data = {}
-            try:
-                ann = json.loads(_row["Answer"])
-                if len(ann) > 0:
-                    # Points dont have type, only x,y; so we use that to distinguish task
-                    # Code can be shortened, but is more readable this way
-                    if "type" in ann[0]:
-                        label_type = "segmentation"
-                    else:
-                        label_type = "detection"
+            _return = self._parse_annotation_row(row, filter_empty=filter_empty)
+            if _return is None:
+                num_empty += 1
+                continue
 
-                    # Segmentation - Treat brush, polygon as MultiPolygon
-                    if label_type == "segmentation":
-                        for idx, _ann in enumerate(ann):
-                            data[idx] = _parse_fns[_ann["type"]](_ann)
+            _row, data = _return
 
-                    # Detection - Treat points as MultiPoint
-                    elif label_type == "detection":
-                        data[0] = _parse_fns["points"](ann)
+            curr_annotation = ImageAnnotation(
+                image_id=_row["ImageID"],
+                slide_name=_row["Image Name"],
+                author=_row["By"],
+                label=_row["Question"],
+                annotation=data,
+            )
+            yield curr_annotation
 
-                    else:
-                        raise NotImplementedError(f"label_type ( {label_type} ) not implemented.")
-
-                elif filter_empty:
-                    num_empty += 1
-                    continue
-
-            except json.decoder.JSONDecodeError:
-                if len(_row["Answer"]) > 0:
-                    data = {0: {"type": "comment", "text": _row["Answer"]}}
-                elif filter_empty:
-                    continue
-
-            annotations[row_idx] = {
-                "imageID": _row["ImageID"],
-                "slidename": _row["Image Name"],
-                "author": _row["By"],
-                "label": _row["Question"],
-                "data": data,
-            }
-
-        # Make sure we accounted for everything
-        if num_entries != len(annotations) + num_empty:
-            raise RuntimeError(f"Some rows were missed. \nParsed: {len(annotations) + num_empty}, Read: {num_entries}")
-
-        self.__annotations = annotations
+            # annotations[row_idx] = curr_annotation
+        # # Make sure we accounted for everything
+        # if num_entries != len(annotations) + num_empty:
+        #     raise RuntimeError(f"Some rows were missed. \nParsed: {len(annotations) + num_empty}, Read: {num_entries}")
+        #
+        # self.__annotations = annotations
 
     def save_shapely(self, label: str, author: str, ann_type: List):
         if self.__annotations is None:
@@ -252,7 +272,10 @@ class SlideScoreAnnotations:
                 save_path.mkdir(parents=True, exist_ok=True)
                 with open(save_path / (label + ".json"), "w") as file:
                     for idx in range(len(annotations[key]["data"])):
-                        if annotations[key]["data"][idx]["type"] in ann_type and len(annotations[key]["data"][idx]["points"]) > 0:
+                        if (
+                            annotations[key]["data"][idx]["type"] in ann_type
+                            and len(annotations[key]["data"][idx]["points"]) > 0
+                        ):
                             json.dump(mapping(annotations[key]["data"][idx]["points"]), file, indent=2)
 
     @staticmethod
@@ -301,5 +324,7 @@ class SlideScoreAnnotations:
 
 if __name__ == "__main__":
     reader = SlideScoreAnnotations(Path("/Users/jteuwen/Downloads/TISSUE_COMPARTMENTS_21_12_20_48.txt"), "465")
-    reader.parse_annotations()
+    for curr_annotation in reader.parse_annotations():
+        print(curr_annotation)
     reader.save_shapely(label="specimen", author="a.karkala@nki.nl", ann_type=["brush", "polygon"])
+    print()

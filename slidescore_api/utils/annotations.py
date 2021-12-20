@@ -260,12 +260,15 @@ class SlideScoreAnnotations:
                 preprocessed_annotations[slide_name] = {}
                 preprocessed_annotations[slide_name][annotations[key]["label"]] = {}
                 for i in range(len(annotations[key]["data"])):
-                    if annotations[key]["data"][i]["type"] in ann_type and len(annotations[key]["data"][i]["points"]) > 0:
+                    if (
+                        annotations[key]["data"][i]["type"] in ann_type
+                        and len(annotations[key]["data"][i]["points"]) > 0
+                    ):
                         preprocessed_annotations[slide_name][label][i] = annotations[key]["data"][i]["points"]
         return preprocessed_annotations
 
     @staticmethod
-    def get_annotation_coordinates(anns, ann_attr, save=False):
+    def get_annotation_coordinates(annotations, ann_attr, save=False):
         """Get the coorinates for the points in the annotation files. Filter for annotation author, slide name, class label
            and type of Annotation.
 
@@ -276,20 +279,21 @@ class SlideScoreAnnotations:
         Output:
             1. mycoordslist: A list containing all the annotation points for a particular class label by a particular author.
         """
-        mycoordslist = []
-        if anns is not None:
+        coordinates = []
+        if annotations is not None:
             slidename = ann_attr["slidename"]
             label = ann_attr["classname"]
             blob = []
-            for i in range(len(anns[slidename][label])):
-                blob.append([list(x.exterior.coords) for x in anns[slidename][label][i].geoms])
-            if blob not in mycoordslist:
-                mycoordslist.append(blob)
+            for idx in range(len(annotations[slidename][label])):
+                blob.append([list(x.exterior.coords) for x in annotations[slidename][label][idx].geoms])
+            if blob not in coordinates:
+                coordinates.append(blob)
             if save:
                 file = open(slidename + ".pkl", "wb")
-                pickle.dump(mycoordslist, file)
+                pickle.dump(coordinates, file)
                 file.close()
-        return mycoordslist
+        return coordinates
+
 
 if __name__ == "__main__":
     annotations = SlideScoreAnnotations(Path("/Users/jteuwen/Downloads/TISSUE_COMPARTMENTS_21_12_20_48.txt"), "465")

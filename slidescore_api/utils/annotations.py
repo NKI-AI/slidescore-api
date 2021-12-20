@@ -241,10 +241,10 @@ class SlideScoreAnnotations:
 
         self.__annotations = annotations
 
-    def save_shapely(self, annotations: Dict, label: str, author: str, ann_type: List):
+    def save_shapely(self, label: str, author: str, ann_type: List):
         if self.__annotations is None:
             raise RuntimeError(f"Cannot save to shapely. First parse the annotations using `parse_annotations()`.")
-
+        annotations = self.__annotations
         for key in annotations.keys():
             if annotations[key]["author"] == author and annotations[key]["label"] == label:
                 slide_name = annotations[key]["slidename"]

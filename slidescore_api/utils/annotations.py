@@ -19,10 +19,21 @@ class SlideScoreAnnotations(object):
         self.filename = filename
         self.study_id = study_id
 
-    def parse_brush_annotation(self, ann: dict) -> dict:
-        # returns points: MultiPolygon
-        positive_polygons = ann["positivePolygons"]
-        negative_polygons = ann["negativePolygons"]
+    @staticmethod
+    def _parse_brush_annotation(annotations: Dict) -> Dict:
+        """
+
+        Parameters
+        ----------
+        annotations : dict
+
+        Returns
+        -------
+        dict
+            Dictionary with key type: "brush" and "points" a shapely.geometry.MultiplePolygon
+        """
+        positive_polygons = annotations["positivePolygons"]
+        negative_polygons = annotations["negativePolygons"]
         positive_polygons = {
             k: Polygon(np.array([[pt["x"], pt["y"]] for pt in polygon], dtype=np.float32))
             for k, polygon in enumerate(positive_polygons)
@@ -34,16 +45,16 @@ class SlideScoreAnnotations(object):
 
         # Check if any negative polygon is contained in a positive polygon
         # TODO: Should strike out inners already taken to make it efficient
-        used_negatives = {nidx: False for nidx in negative_polygons}
+        used_negatives = {idx: False for idx in negative_polygons}
         inners_count = 0
         polygons = []
         for p_poly in positive_polygons.values():
             inners = []
-            for nidx, n_poly in negative_polygons.items():
-                if not used_negatives[nidx]:
+            for idx, n_poly in negative_polygons.items():
+                if not used_negatives[idx]:
                     if n_poly.within(p_poly):
                         inners.append(n_poly)
-                        used_negatives[nidx] = True
+                        used_negatives[idx] = True
             inners_count += len(inners)
             polygon = Polygon(p_poly, inners)
             polygons.append(polygon)
@@ -52,7 +63,7 @@ class SlideScoreAnnotations(object):
             warnings.warn(
                 f"Not all negative_polygons accounted for: {inners_count} / {len(negative_polygons)}.\n"
                 f"Indices :{[nidx for nidx, val in used_negatives.items() if not val]}.\n"
-                f"Polygons:{[([pt for pt in negative_polygons[nidx].exterior.coords]) for nidx, val in used_negatives.items() if not val]}.\n"
+                f"Polygons:{[([pt for pt in negative_polygons[idx].exterior.coords]) for nidx, val in used_negatives.items() if not val]}.\n"
                 f"Areas   :{[negative_polygons[nidx].area for nidx, val in used_negatives.items() if not val]}.\n"
             )
 
@@ -63,11 +74,23 @@ class SlideScoreAnnotations(object):
         }
         return data
 
-    def parse_polygon_annotation(self, ann: dict) -> dict:
+    @staticmethod
+    def _parse_polygon_annotation(annotations: Dict) -> Dict:
+        """
+
+        Parameters
+        ----------
+        annotations : dict
+
+        Returns
+        -------
+        dict
+            Dictionary with key type: "brush" and "points" a shapely.geometry.MultiplePolygon
+        """
         # returns points: MultiPolygon
-        points = np.array([[pt["x"], pt["y"]] for pt in ann["points"]], dtype=np.float32)
+        points = np.array([[pt["x"], pt["y"]] for pt in annotations["points"]], dtype=np.float32)
         if len(points) < 3:
-            warnings.warn(f"Invalid polygon: {ann}")
+            warnings.warn(f"Invalid polygon: {annotations}")
             points = []
         else:
             points = MultiPolygon([Polygon(points)])
@@ -77,18 +100,19 @@ class SlideScoreAnnotations(object):
         }
         return data
 
-    def parse_ellipse_annotation(self, ann: dict) -> dict:
+    @staticmethod
+    def _parse_ellipse_annotation(annotations: Dict) -> Dict:
         # returns center: Point, size: Point
-        if (ann["center"]["x"] is not None) & (ann["center"]["y"] is not None):
-            center = np.array([ann["center"]["x"], ann["center"]["y"]], dtype=np.float32)
-            size = np.array([ann["size"]["x"], ann["size"]["y"]], dtype=np.float32)
+        if (annotations["center"]["x"] is not None) & (annotations["center"]["y"] is not None):
+            center = np.array([annotations["center"]["x"], annotations["center"]["y"]], dtype=np.float32)
+            size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
             data = {
                 "type": "ellipse",
                 "center": Point(center),
                 "size": Point(size),
             }
         else:
-            warnings.warn(f"Invalid ellipse: {ann['center'], ann['size']}, adding as -1.")
+            warnings.warn(f"Invalid ellipse: {annotations['center'], annotations['size']}, adding as -1.")
             data = {
                 "type": "ellipse",
                 "center": Point(-1, -1),
@@ -96,10 +120,11 @@ class SlideScoreAnnotations(object):
             }
         return data
 
-    def parse_rect_annotation(self, ann: dict) -> dict:
+    @staticmethod
+    def _parse_rect_annotation(annotations: Dict) -> Dict:
         # returns corner: Point, size: Point
-        corner = np.array([ann["corner"]["x"], ann["corner"]["y"]], dtype=np.float32)
-        size = np.array([ann["size"]["x"], ann["size"]["y"]], dtype=np.float32)
+        corner = np.array([annotations["corner"]["x"], annotations["corner"]["y"]], dtype=np.float32)
+        size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
         data = {
             "type": "rect",
             "corner": Point(corner),
@@ -107,9 +132,10 @@ class SlideScoreAnnotations(object):
         }
         return data
 
-    def parse_points_annotation(self, ann: dict) -> dict:
+    @staticmethod
+    def _parse_points_annotation(annotations: Dict) -> Dict:
         # returns points: MultiPoint
-        points = np.array([[_ann["x"], _ann["y"]] for _ann in ann], dtype=np.float32)
+        points = np.array([[_ann["x"], _ann["y"]] for _ann in annotations], dtype=np.float32)
         data = {
             "type": "points",
             "points": MultiPoint(points),
@@ -117,22 +143,35 @@ class SlideScoreAnnotations(object):
         return data
 
     def read_slidescore_annotations(self, filter_empty=True) -> Dict[int, Dict]:
-        """Function to convert slidescore annotations (txt file) to dictionary.
+        """
+        Function to convert slidescore annotations (txt file) to dictionary.
+
         Reads text file imported from slidescore into a dictionary with rows which are dicts with keys:
             row_idx: {imageID, slidename, author, label, data}
-        NOTE: `row_idx` need not be sequential and is mapped to the original idx in the text file.
+
+        Notes
+        -----
+        `row_idx` need not be sequential and is mapped to the original idx in the text file.
         Data is stored based on the type, accessed using `data["type"]`:
             brush: type (str), positive_polygons (ndarray) , negative_polygons (ndarray)
             polygon: type (str), points (ndarray)
             ellipse: type (str), center (ndarray) , size (ndarray)
         Empty rows have empty dict as data.
+
+        Parameters
+        ----------
+        filter_empty
+
+        Returns
+        -------
+
         """
-        PARSE_FNS = {
-            "brush": self.parse_brush_annotation,
-            "ellipse": self.parse_ellipse_annotation,
-            "polygon": self.parse_polygon_annotation,
-            "rect": self.parse_rect_annotation,
-            "points": self.parse_points_annotation,
+        _parse_fns = {
+            "brush": self._parse_brush_annotation,
+            "ellipse": self._parse_ellipse_annotation,
+            "polygon": self._parse_polygon_annotation,
+            "rect": self._parse_rect_annotation,
+            "points": self._parse_points_annotation,
         }
         filepath = Path(self.filename)
         entries = filepath.read_text().split("\n")[:-1]
@@ -161,11 +200,11 @@ class SlideScoreAnnotations(object):
                     # Segmentation - Treat brush, polygon as MultiPolygon
                     if label_type == "segmentation":
                         for idx, _ann in enumerate(ann):
-                            data[idx] = PARSE_FNS[_ann["type"]](_ann)
+                            data[idx] = _parse_fns[_ann["type"]](_ann)
 
                     # Detection - Treat points as MultiPoint
                     elif label_type == "detection":
-                        data[0] = PARSE_FNS["points"](ann)
+                        data[0] = _parse_fns["points"](ann)
 
                     else:
                         raise NotImplementedError(f"label_type ( {label_type} ) not implemented.")

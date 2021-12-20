@@ -259,6 +259,8 @@ class SlideScoreAnnotations:
                 num_empty += 1
                 continue
 
+            # TODO: Filter here.
+
             _row, data = _return
             curr_annotation = ImageAnnotation(
                 image_id=_row["ImageID"],

@@ -1,18 +1,21 @@
-#!/home/ajey/miniconda3/bin/python3
 # coding=utf-8
 # TODO: Parse function must be able to return None, and check before adding
 
 import json
-import pathlib
+import os
 import pickle
+import warnings
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Union
+
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
-import warnings
+
+PathLike = Union[str, os.PathLike]
+
 
 class SlideScoreAnnotations(object):
-    def __init__(self, filename: str, study_id: str):
+    def __init__(self, filename: PathLike, study_id: str):
         self.filename = filename
         self.study_id = study_id
 

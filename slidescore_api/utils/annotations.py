@@ -10,7 +10,6 @@ from typing import Any, Dict, Iterable, NamedTuple, Union
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
 
-
 class ImageAnnotation(NamedTuple):
     slide_name: str
     author: str
@@ -106,7 +105,7 @@ def _parse_polygon_annotation(annotations: Dict) -> Dict:
         Dictionary with key type: "brush" and "points" a shapely.geometry.MultiplePolygon
     """
     # returns points: MultiPolygon
-    points = np.array([[pt["x"], pt["y"]] for pt in annotations["points"]], dtype=np.float32)
+    points: Any = np.array([[pt["x"], pt["y"]] for pt in annotations["points"]], dtype=np.float32)
     if len(points) < 3:
         warnings.warn(f"Invalid polygon: {annotations}")
         points = []

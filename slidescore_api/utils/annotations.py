@@ -189,7 +189,7 @@ class SlideScoreAnnotations:
 
     def api_iterator(self, annotations):
         for annotation in annotations:
-            yield annotation
+            yield annotation.to_row()
 
     def _parse_annotation_row(self, row, filter_empty):
         _row = {k: v for k, v in zip(self._headers, row.split("\t"))}

@@ -234,18 +234,20 @@ def download_labels(
         image_id = image["id"]
         annotations = client.get_results(study_id, imageid=image_id, **extra_kwargs)
 
-        if output_type == output_type.json:
+        if output_type == LabelOutputType.json.value:
             _save_label_as_json(save_dir, image_id, image, annotations)
-        elif output_type == output_type.raw:
+        elif output_type == LabelOutputType.raw.value:
             with open("annotations.txt", "a") as f:
                 for annotation in annotations:
                     f.write(annotation.to_row() + "\n")
-        elif output_type == output_type.shapely:
+        elif output_type == LabelOutputType.shapely.value:
             annotation_parser = SlideScoreAnnotations()
             row_iterator = _row_iterator(annotations)
+
             for idx, curr_annotation in enumerate(
                 annotation_parser.from_iterable(row_iterator)
             ):
+                # TODO: Ajey, for you to debug ;-)
                 print(curr_annotation)
         else:
             raise RuntimeError(f"Output type not supported.")

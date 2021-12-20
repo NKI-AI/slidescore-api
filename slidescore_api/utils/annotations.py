@@ -22,6 +22,23 @@ class ImageAnnotation(NamedTuple):
     label: str
     annotation: Dict[str, Union[str, Union[MultiPolygon, MultiPoint, Point, Polygon]]]
 
+def save_shapely(annotations, label: str, author: str, ann_type: List):
+    # if self.__annotations is None:
+    #     raise RuntimeError(f"Cannot save to shapely. First parse the annotations using `parse_annotations()`.")
+    for key in annotations.keys():
+        if annotations[key]["author"] == author and annotations[key]["label"] == label:
+            slide_name = annotations[key]["slidename"]
+            save_path = Path(self.study_id) / "annotations" / slide_name
+            save_path.mkdir(parents=True, exist_ok=True)
+            with open(save_path / (label + ".json"), "w") as file:
+                for idx in range(len(annotations[key]["data"])):
+                    if (
+                        annotations[key]["data"][idx]["type"] in ann_type
+                        and len(annotations[key]["data"][idx]["points"]) > 0
+                    ):
+                        json.dump(mapping(annotations[key]["data"][idx]["points"]), file, indent=2)
+
+
 
 def _parse_brush_annotation(annotations: Dict) -> Dict:
     """
@@ -251,24 +268,6 @@ class SlideScoreAnnotations:
                 annotation=data,
             )
             yield curr_annotation
-
-
-    def save_shapely(self, label: str, author: str, ann_type: List):
-        if self.__annotations is None:
-            raise RuntimeError(f"Cannot save to shapely. First parse the annotations using `parse_annotations()`.")
-        annotations = self.__annotations
-        for key in annotations.keys():
-            if annotations[key]["author"] == author and annotations[key]["label"] == label:
-                slide_name = annotations[key]["slidename"]
-                save_path = Path(self.study_id) / "annotations" / slide_name
-                save_path.mkdir(parents=True, exist_ok=True)
-                with open(save_path / (label + ".json"), "w") as file:
-                    for idx in range(len(annotations[key]["data"])):
-                        if (
-                            annotations[key]["data"][idx]["type"] in ann_type
-                            and len(annotations[key]["data"][idx]["points"]) > 0
-                        ):
-                            json.dump(mapping(annotations[key]["data"][idx]["points"]), file, indent=2)
 
     @staticmethod
     def filter_annotations(annotations: Dict, label, author, ann_type) -> Dict:

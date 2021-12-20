@@ -1,3 +1,4 @@
+#!/home/ajey/miniconda3/bin/python3
 # coding=utf-8
 # Copyright (c) Jonas Teuwen
 import argparse
@@ -7,16 +8,13 @@ import logging
 import os
 import pathlib
 import sys
-import typing
 from pathlib import Path
 from typing import Optional
 
 from tqdm import tqdm
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client
-from slidescore_api.utils.annotations import SlideScoreAnnotations
-
-PathLike = typing.Union[str, os.PathLike]
+from slidescore_api.utils.annotations import SlideScoreAnnotations, save_shapely
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +22,7 @@ logger = logging.getLogger(__name__)
 ANNOSHAPE_TYPES = ["polygon", "rect", "ellipse", "brush", "heatmap"]
 
 
-def parse_api_token(data: Optional[PathLike] = None) -> str:
+def parse_api_token(data: Optional[Path] = None) -> str:
     """
     Parse the API token from file or from the SLIDESCORE_API_KEY. If file is given, this will overwrite the
     environment variable.
@@ -131,10 +129,11 @@ def retrieve_questions(
     return scores
 
 
-def write_shapely_to_disc(slidescore_anns_file: PathLike, study_id: str, author: str, label: str, ann_type: list):
-    reader = SlideScoreAnnotations(slidescore_anns_file, study_id)
-    anns = reader.annotations_generator()
-    reader.save_shapely(annotations=anns, label=label, author=author, ann_type=ann_type)
+def write_shapely_to_disc(annotation_file_path: Path, study_id: str, author: str, label: str, ann_type: list) -> None:
+    reader = SlideScoreAnnotations(Path(annotation_file_path))
+    for idx, curr_annotation in enumerate(reader.annotations_generator(filter_author=author, filter_label=label)):
+        save_shapely(curr_annotation, study_id=study_id, filter_type=ann_type)
+    reader.check()
 
 
 def download_labels(

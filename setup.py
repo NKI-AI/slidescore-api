@@ -40,11 +40,7 @@ setup(
             "slidescore=slidescore_api.cli:cli",
         ],
     },
-    install_requires=[
-        "requests",
-        "tqdm",
-        "Pillow",
-    ],
+    install_requires=["requests", "tqdm", "Pillow", "Shapely", "numpy"],
     extras_require={
         "dev": [
             "pytest",

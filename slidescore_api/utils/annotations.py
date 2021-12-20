@@ -156,7 +156,7 @@ class SlideScoreAnnotations:
         rows = entries[1:]
         return num_entries, rows
 
-    def parse_annotations(self, filter_empty=True) -> Dict[int, Dict]:
+    def parse_annotations(self, filter_empty=True) -> None:
         """
         Function to convert slidescore annotations (txt file) to dictionary.
 

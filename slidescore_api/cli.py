@@ -9,7 +9,7 @@ import pathlib
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Iterable
 
 from tqdm import tqdm
 
@@ -175,7 +175,7 @@ def _save_label_as_json(save_dir, image_id, image, annotations):
         json.dump(annotation_data, file, indent=2)
 
 
-def _row_iterator(slidescore_annotations: SlideScoreResult):
+def _row_iterator(slidescore_annotations: Iterable[SlideScoreResult]):
     for annotation in slidescore_annotations:
         yield annotation.to_row()
 
@@ -239,7 +239,7 @@ def download_labels(
         elif output_type == output_type.raw:
             with open("annotations.txt", "a") as f:
                 for annotation in annotations:
-                    f.write(annotation + "\n")
+                    f.write(annotation.to_row() + "\n")
         elif output_type == output_type.shapely:
             annotation_parser = SlideScoreAnnotations()
             row_iterator = _row_iterator(annotations)

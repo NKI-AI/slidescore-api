@@ -1,43 +1,41 @@
+#!/home/ajey/miniconda3/bin/python3
 # coding=utf-8
 # TODO: Parse function must be able to return None, and check before adding
 
 import json
-import os
-import pickle
 import warnings
 from pathlib import Path
-from typing import Dict, Union, List, Iterable
-from typing import NamedTuple
+from typing import Any, Dict, Iterable, NamedTuple, Union
 
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
 
-PathLike = Union[str, os.PathLike]
-
 
 class ImageAnnotation(NamedTuple):
-    image_id: str
     slide_name: str
     author: str
     label: str
-    annotation: Dict[str, Union[str, Union[MultiPolygon, MultiPoint, Point, Polygon]]]
+    annotation: Union[Dict[int, Union[dict, Any]], Dict[int, Union[Union[Dict[str, Union[str, Any]], dict], Any]]]
 
-def save_shapely(annotations, label: str, author: str, ann_type: List):
-    # if self.__annotations is None:
-    #     raise RuntimeError(f"Cannot save to shapely. First parse the annotations using `parse_annotations()`.")
-    for key in annotations.keys():
-        if annotations[key]["author"] == author and annotations[key]["label"] == label:
-            slide_name = annotations[key]["slidename"]
-            save_path = Path(self.study_id) / "annotations" / slide_name
-            save_path.mkdir(parents=True, exist_ok=True)
-            with open(save_path / (label + ".json"), "w") as file:
-                for idx in range(len(annotations[key]["data"])):
-                    if (
-                        annotations[key]["data"][idx]["type"] in ann_type
-                        and len(annotations[key]["data"][idx]["points"]) > 0
-                    ):
-                        json.dump(mapping(annotations[key]["data"][idx]["points"]), file, indent=2)
 
+def save_shapely(annotations: ImageAnnotation, study_id: str, filter_type: list) -> None:
+    """
+
+    Parameters
+    ----------
+    annotations
+    study_id
+    filter_type
+
+    """
+    save_path = Path(study_id + "/" + "annotations" + "/" + annotations.author + "/" + annotations.slide_name)
+    save_path.mkdir(parents=True, exist_ok=True)
+    file = open(save_path / (annotations.label + ".json"), "w")
+    for polygon_id in range(len(annotations.annotation)):
+        if annotations.annotation[polygon_id]["type"] in filter_type:
+            if len(annotations.annotation[polygon_id]["points"]) > 0:
+                json.dump(mapping(annotations.annotation[polygon_id]["points"]), file, indent=2)
+    file.close()
 
 
 def _parse_brush_annotation(annotations: Dict) -> Dict:
@@ -173,10 +171,12 @@ class SlideScoreAnnotations:
         "points": _parse_points_annotation,
     }
 
-    def __init__(self, filename: PathLike, study_id: str):
+    def __init__(self, filename: Path):
         self.filename = filename
-        self.study_id = study_id
-        self.__annotations = None
+        self.unannotated = 0
+        self.annotations_generated = 0
+        self.num_empty = 0
+        self.num_entries = 0
 
     def read_annotation_file(self):
         filepath = Path(self.filename)
@@ -225,9 +225,21 @@ class SlideScoreAnnotations:
 
         return _row, data
 
-    def annotations_generator(self, filter_empty=True) -> Iterable:
+    def check(self) -> None:
+        # Make sure we accounted for everything
+        if self.num_entries != self.annotations_generated + self.unannotated + self.num_empty:
+            raise RuntimeError(
+                f"Some rows were missed. \nParsed: {self.annotations_generated + self.num_empty}, Read: {self.num_entries}"
+            )
+        print("Total annotated images: ", self.annotations_generated)
+        print("Total unannotated images: ", self.unannotated)
+        print("Total empty entries: ", self.num_empty)
+
+    def annotations_generator(
+        self, filter_author: str = None, filter_label: str = None, filter_empty=True
+    ) -> Iterable:
         """
-        Function to convert slidescore annotations (txt file) to dictionary.
+        Function to convert slidescore annotations (txt file) to an iterable.
 
         Reads text file imported from slidescore into a dictionary with rows which are dicts with keys:
             row_idx: {imageID, slidename, author, label, data}
@@ -244,88 +256,43 @@ class SlideScoreAnnotations:
         Parameters
         ----------
         filter_empty
+        filter_author
+        filter_label
 
         Returns
         -------
-
+        row_annotation
         """
+        self.num_entries, rows = self.read_annotation_file()
 
-        num_empty = 0
-        num_entries, rows = self.read_annotation_file()
-
-        for row in rows:
+        for row_id, row in enumerate(rows):
             _return = self._parse_annotation_row(row, filter_empty=filter_empty)
             if _return is None:
-                num_empty += 1
+                self.num_empty += 1
                 continue
-
-            # TODO: Filter here.
-
             _row, data = _return
-            curr_annotation = ImageAnnotation(
-                image_id=_row["ImageID"],
+
+            row_annotation = ImageAnnotation(
                 slide_name=_row["Image Name"],
                 author=_row["By"],
                 label=_row["Question"],
                 annotation=data,
             )
-            yield curr_annotation
 
-    @staticmethod
-    def filter_annotations(annotations: Dict, label, author, ann_type) -> Dict:
-        preprocessed_annotations = {}
-        for key in annotations.keys():
-            if annotations[key]["author"] == author and annotations[key]["label"] == label:
-                slide_name = annotations[key]["slidename"]
-                preprocessed_annotations[slide_name] = {}
-                preprocessed_annotations[slide_name][annotations[key]["label"]] = {}
-                for i in range(len(annotations[key]["data"])):
-                    if (
-                        annotations[key]["data"][i]["type"] in ann_type
-                        and len(annotations[key]["data"][i]["points"]) > 0
-                    ):
-                        preprocessed_annotations[slide_name][label][i] = annotations[key]["data"][i]["points"]
-        return preprocessed_annotations
+            if filter_author is not None or filter_label is not None:
+                if row_annotation.author != filter_author or row_annotation.label != filter_label:
+                    self.unannotated += 1
+                    continue
+            self.annotations_generated += 1
 
-    @staticmethod
-    def get_annotation_coordinates(annotations, ann_attr, save=False):
-        """Get the coorinates for the points in the annotation files. Filter for annotation author, slide name, class label
-           and type of Annotation.
-
-        Input:
-            1. anns: Dictionary object containing all the annotations from some slidescore study.
-            2. ann_attr: Dictionary object containing the attributes of the annotations.
-
-        Output:
-            1. mycoordslist: A list containing all the annotation points for a particular class label by a particular author.
-        """
-        coordinates = []
-        if annotations is not None:
-            slidename = ann_attr["slidename"]
-            label = ann_attr["classname"]
-            blob = []
-            for idx in range(len(annotations[slidename][label])):
-                blob.append([list(x.exterior.coords) for x in annotations[slidename][label][idx].geoms])
-            if blob not in coordinates:
-                coordinates.append(blob)
-            if save:
-                file = open(slidename + ".pkl", "wb")
-                pickle.dump(coordinates, file)
-                file.close()
-        return coordinates
+            yield row_annotation
 
 
 if __name__ == "__main__":
-    reader = SlideScoreAnnotations(Path("/Users/jteuwen/Downloads/TISSUE_COMPARTMENTS_21_12_20_48.txt"), "465")
-
-    # TODO: Put this somewhere
-    # annotations[row_idx] = curr_annotation
-    # # Make sure we accounted for everything
-    # if num_entries != len(annotations) + num_empty:
-    #     raise RuntimeError(f"Some rows were missed. \nParsed: {len(annotations) + num_empty}, Read: {num_entries}")
-    #
-
+    reader = SlideScoreAnnotations(Path("../../TISSUE_COMPARTMENTS_21_10_19_10.txt"))
+    author = "a.karkala@nki.nl"
+    label = "specimen"
+    ann_type = ["brush", "polygon"]
     for idx, curr_annotation in enumerate(reader.annotations_generator()):
-        print(curr_annotation)
-    reader.save_shapely(label="specimen", author="a.karkala@nki.nl", ann_type=["brush", "polygon"])
-    print()
+        save_shapely(curr_annotation, study_id="642", filter_type=ann_type)
+    reader.check()

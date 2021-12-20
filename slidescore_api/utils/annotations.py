@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
-
+import warnings
 
 class SlideScoreAnns(object):
     def __init__(self, filename: str, study_id: str):
@@ -46,7 +46,7 @@ class SlideScoreAnns(object):
             polygons.append(polygon)
 
         if not len(negative_polygons) == inners_count:
-            print(
+            warnings.warn(
                 f"WARNING: Not all negative_polygons accounted for: {inners_count} / {len(negative_polygons)}.\n"
                 f"Indices :{[nidx for nidx, val in used_negatives.items() if not val]}.\n"
                 f"Polygons:{[([pt for pt in negative_polygons[nidx].exterior.coords]) for nidx, val in used_negatives.items() if not val]}.\n"
@@ -64,7 +64,7 @@ class SlideScoreAnns(object):
         # returns points: MultiPolygon
         points = np.array([[pt["x"], pt["y"]] for pt in ann["points"]], dtype=np.float32)
         if len(points) < 3:
-            print(f"WARNING: Invalid polygon: {ann}")
+            warnings.warn(f"Invalid polygon: {ann}")
             points = []
         else:
             points = MultiPolygon([Polygon(points)])
@@ -85,7 +85,7 @@ class SlideScoreAnns(object):
                 "size": Point(size),
             }
         else:
-            print(f"WARNING: Invalid ellipse: {ann['center'], ann['size']}, adding as -1.")
+            warnings.warn(f"Invalid ellipse: {ann['center'], ann['size']}, adding as -1.")
             data = {
                 "type": "ellipse",
                 "center": Point(-1, -1),

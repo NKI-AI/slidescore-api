@@ -15,6 +15,8 @@ PathLike = Union[str, os.PathLike]
 
 
 class SlideScoreAnnotations(object):
+    headers = ["ImageID", "Image Name", "By", "Question", "Answer"]
+
     def __init__(self, filename: PathLike, study_id: str):
         self.filename = filename
         self.study_id = study_id
@@ -142,6 +144,17 @@ class SlideScoreAnnotations(object):
         }
         return data
 
+    def read_annotation_file(self):
+        filepath = Path(self.filename)
+        entries = filepath.read_text().split("\n")[:-1]
+        num_entries = len(entries) - 1
+
+        if not self.headers != entries[0].split("\t"):
+            raise RuntimeError("Header is missing.")
+
+        rows = entries[1:]
+        return num_entries, rows
+
     def read_slidescore_annotations(self, filter_empty=True) -> Dict[int, Dict]:
         """
         Function to convert slidescore annotations (txt file) to dictionary.
@@ -173,19 +186,13 @@ class SlideScoreAnnotations(object):
             "rect": self._parse_rect_annotation,
             "points": self._parse_points_annotation,
         }
-        filepath = Path(self.filename)
-        entries = filepath.read_text().split("\n")[:-1]
-        num_entries = len(entries) - 1
+
         num_empty = 0
+        num_entries, rows = self.read_annotation_file()
 
-        headers = ["ImageID", "Image Name", "By", "Question", "Answer"]
-        assert headers == entries[0].split("\t")
-
-        rows = entries[1:]
-
-        anns = {}
+        annotations = {}
         for row_idx, row in enumerate(rows):
-            _row = {k: v for k, v in zip(headers, row.split("\t"))}
+            _row = {k: v for k, v in zip(self.headers, row.split("\t"))}
             data = {}
             try:
                 ann = json.loads(_row["Answer"])
@@ -219,7 +226,7 @@ class SlideScoreAnnotations(object):
                 elif filter_empty:
                     continue
 
-            anns[row_idx] = {
+            annotations[row_idx] = {
                 "imageID": _row["ImageID"],
                 "slidename": _row["Image Name"],
                 "author": _row["By"],
@@ -228,11 +235,10 @@ class SlideScoreAnnotations(object):
             }
 
         # Make sure we accounted for everything
-        assert (
-            num_entries == len(anns) + num_empty
-        ), f"Some rows were missed. \nParsed: {len(anns) + num_empty}, Read: {num_entries}"
+        if num_entries != len(annotations) + num_empty:
+            raise RuntimeError(f"Some rows were missed. \nParsed: {len(annotations) + num_empty}, Read: {num_entries}")
 
-        return anns
+        return annotations
 
     def save_shapely(self, anns: dict, label: str, author: str, ann_type: list):
         for key in anns.keys():
@@ -245,19 +251,21 @@ class SlideScoreAnnotations(object):
                     if anns[key]["data"][i]["type"] in ann_type and len(anns[key]["data"][i]["points"]) > 0:
                         json.dump(mapping(anns[key]["data"][i]["points"]), file, indent=2)
 
-    def filter_anns(self, anns, label, author, ann_type):
+    @staticmethod
+    def filter_annotations(annotations: Dict, label, author, ann_type) -> Dict:
         preprocessed_annotations = {}
-        for key in anns.keys():
-            if anns[key]["author"] == author and anns[key]["label"] == label:
-                slide_name = anns[key]["slidename"]
+        for key in annotations.keys():
+            if annotations[key]["author"] == author and annotations[key]["label"] == label:
+                slide_name = annotations[key]["slidename"]
                 preprocessed_annotations[slide_name] = {}
-                preprocessed_annotations[slide_name][anns[key]["label"]] = {}
-                for i in range(len(anns[key]["data"])):
-                    if anns[key]["data"][i]["type"] in ann_type and len(anns[key]["data"][i]["points"]) > 0:
-                        preprocessed_annotations[slide_name][label][i] = anns[key]["data"][i]["points"]
+                preprocessed_annotations[slide_name][annotations[key]["label"]] = {}
+                for i in range(len(annotations[key]["data"])):
+                    if annotations[key]["data"][i]["type"] in ann_type and len(annotations[key]["data"][i]["points"]) > 0:
+                        preprocessed_annotations[slide_name][label][i] = annotations[key]["data"][i]["points"]
         return preprocessed_annotations
 
-    def get_ann_coords(self, anns, ann_attr, save=False):
+    @staticmethod
+    def get_annotation_coordinates(anns, ann_attr, save=False):
         """Get the coorinates for the points in the annotation files. Filter for annotation author, slide name, class label
            and type of Annotation.
 

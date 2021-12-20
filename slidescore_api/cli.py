@@ -131,7 +131,7 @@ def retrieve_questions(
 
 def write_shapely_to_disc(annotation_file_path: Path, study_id: str, author: str, label: str, ann_type: list) -> None:
     reader = SlideScoreAnnotations(Path(annotation_file_path))
-    for idx, curr_annotation in enumerate(reader.annotations_generator(filter_author=author, filter_label=label)):
+    for idx, curr_annotation in enumerate(reader.annotations_from_iterable(filter_author=author, filter_label=label)):
         save_shapely(curr_annotation, study_id=study_id, filter_type=ann_type)
     reader.check()
 

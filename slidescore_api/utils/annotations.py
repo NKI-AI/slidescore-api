@@ -3,6 +3,7 @@
 # TODO: Parse function must be able to return None, and check before adding
 
 import json
+import os
 import warnings
 from pathlib import Path
 from typing import Any, Dict, Iterable, NamedTuple, Union
@@ -171,23 +172,20 @@ class SlideScoreAnnotations:
         "points": _parse_points_annotation,
     }
 
-    def __init__(self, filename: Path):
-        self.filename = filename
+    def __init__(self):
         self.unannotated = 0
         self.annotations_generated = 0
         self.num_empty = 0
         self.num_entries = 0
 
-    def read_annotation_file(self):
-        filepath = Path(self.filename)
-        entries = filepath.read_text().split("\n")[:-1]
-        num_entries = len(entries) - 1
+    def annotation_file_iterator(self, filename: os.PathLike):
+        filename = Path(filename)
 
-        if self._headers != entries[0].split("\t"):
-            raise RuntimeError("Header is missing.")
-
-        rows = entries[1:]
-        return num_entries, rows
+        with open(filename, "r") as annotation_file:
+            if self._headers != annotation_file.readline().strip().split("\t"):
+                raise RuntimeError("Header missing.")
+            for line in annotation_file:
+                yield line
 
     def _parse_annotation_row(self, row, filter_empty):
         _row = {k: v for k, v in zip(self._headers, row.split("\t"))}
@@ -235,8 +233,8 @@ class SlideScoreAnnotations:
         print("Total unannotated images: ", self.unannotated)
         print("Total empty entries: ", self.num_empty)
 
-    def annotations_generator(
-        self, filter_author: str = None, filter_label: str = None, filter_empty=True
+    def annotations_from_iterable(
+        self, row_iterator: Iterable, filter_author: str = None, filter_label: str = None, filter_empty=True
     ) -> Iterable:
         """
         Function to convert slidescore annotations (txt file) to an iterable.
@@ -255,6 +253,7 @@ class SlideScoreAnnotations:
 
         Parameters
         ----------
+        row_iterator
         filter_empty
         filter_author
         filter_label
@@ -263,9 +262,7 @@ class SlideScoreAnnotations:
         -------
         row_annotation
         """
-        self.num_entries, rows = self.read_annotation_file()
-
-        for row_id, row in enumerate(rows):
+        for row in row_iterator:
             _return = self._parse_annotation_row(row, filter_empty=filter_empty)
             if _return is None:
                 self.num_empty += 1
@@ -289,10 +286,15 @@ class SlideScoreAnnotations:
 
 
 if __name__ == "__main__":
-    reader = SlideScoreAnnotations(Path("../../TISSUE_COMPARTMENTS_21_10_19_10.txt"))
+    path = Path("/Users/jteuwen/Downloads/TISSUE_COMPARTMENTS_21_12_20_48.txt")
+    reader = SlideScoreAnnotations()
     author = "a.karkala@nki.nl"
     label = "specimen"
     ann_type = ["brush", "polygon"]
-    for idx, curr_annotation in enumerate(reader.annotations_generator()):
-        save_shapely(curr_annotation, study_id="642", filter_type=ann_type)
+
+    row_iterator = reader.annotation_file_iterator(path)
+
+    for idx, curr_annotation in enumerate(reader.annotations_from_iterable(row_iterator)):
+        print(curr_annotation)
+        # save_shapely(curr_annotation, study_id="642", filter_type=ann_type)
     reader.check()

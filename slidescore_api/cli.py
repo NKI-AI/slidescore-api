@@ -1,3 +1,4 @@
+#!/home/ajey/miniconda3/bin/python3
 # coding=utf-8
 # Copyright (c) Jonas Teuwen
 import argparse
@@ -10,6 +11,7 @@ import sys
 import typing
 from pathlib import Path
 from typing import Optional
+
 from tqdm import tqdm
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client

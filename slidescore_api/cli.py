@@ -134,7 +134,7 @@ def retrieve_questions(
 def write_shapely_to_disc(slidescore_anns_file: PathLike, study_id: str, author: str, label: str, ann_type: list):
     reader = SlideScoreAnnotations(slidescore_anns_file, study_id)
     anns = reader.parse_annotations()
-    reader.save_shapely(anns=anns, label=label, author=author, ann_type=ann_type)
+    reader.save_shapely(annotations=anns, label=label, author=author, ann_type=ann_type)
 
 
 def download_labels(

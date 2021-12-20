@@ -6,7 +6,7 @@ import os
 import pickle
 import warnings
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Union, List
 
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
@@ -20,7 +20,7 @@ class SlideScoreAnnotations:
     def __init__(self, filename: PathLike, study_id: str):
         self.filename = filename
         self.study_id = study_id
-        self.__is_parsed = False
+        self.__annotations = None
 
     @staticmethod
     def _parse_brush_annotation(annotations: Dict) -> Dict:
@@ -239,22 +239,21 @@ class SlideScoreAnnotations:
         if num_entries != len(annotations) + num_empty:
             raise RuntimeError(f"Some rows were missed. \nParsed: {len(annotations) + num_empty}, Read: {num_entries}")
 
-        self.__is_parsed = True
-        return annotations
+        self.__annotations = annotations
 
-    def save_shapely(self, anns: dict, label: str, author: str, ann_type: list):
-        if not self.__is_parsed:
+    def save_shapely(self, annotations: Dict, label: str, author: str, ann_type: List):
+        if self.__annotations is None:
             raise RuntimeError(f"Cannot save to shapely. First parse the annotations using `parse_annotations()`.")
 
-        for key in anns.keys():
-            if anns[key]["author"] == author and anns[key]["label"] == label:
-                slide_name = anns[key]["slidename"]
+        for key in annotations.keys():
+            if annotations[key]["author"] == author and annotations[key]["label"] == label:
+                slide_name = annotations[key]["slidename"]
                 save_path = Path(self.study_id) / "annotations" / slide_name
                 save_path.mkdir(parents=True, exist_ok=True)
                 with open(save_path / (label + ".json"), "w") as file:
-                    for idx in range(len(anns[key]["data"])):
-                        if anns[key]["data"][idx]["type"] in ann_type and len(anns[key]["data"][idx]["points"]) > 0:
-                            json.dump(mapping(anns[key]["data"][idx]["points"]), file, indent=2)
+                    for idx in range(len(annotations[key]["data"])):
+                        if annotations[key]["data"][idx]["type"] in ann_type and len(annotations[key]["data"][idx]["points"]) > 0:
+                            json.dump(mapping(annotations[key]["data"][idx]["points"]), file, indent=2)
 
     @staticmethod
     def filter_annotations(annotations: Dict, label, author, ann_type) -> Dict:
@@ -303,4 +302,4 @@ class SlideScoreAnnotations:
 if __name__ == "__main__":
     reader = SlideScoreAnnotations(Path("/Users/jteuwen/Downloads/TISSUE_COMPARTMENTS_21_12_20_48.txt"), "465")
     anns = reader.parse_annotations()
-    reader.save_shapely(anns=anns, label="specimen", author="a.karkala@nki.nl", ann_type=["brush", "polygon"])
+    reader.save_shapely(annotations=anns, label="specimen", author="a.karkala@nki.nl", ann_type=["brush", "polygon"])

@@ -302,6 +302,5 @@ class SlideScoreAnnotations:
 
 if __name__ == "__main__":
     reader = SlideScoreAnnotations(Path("/Users/jteuwen/Downloads/TISSUE_COMPARTMENTS_21_12_20_48.txt"), "465")
-
     anns = reader.parse_annotations()
-    reader.save_shapely(anns=anns, label=label, author=author, ann_type=ann_type)
+    reader.save_shapely(anns=anns, label="specimen", author="a.karkala@nki.nl", ann_type=["brush", "polygon"])

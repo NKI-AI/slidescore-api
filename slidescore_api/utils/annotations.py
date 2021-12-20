@@ -11,7 +11,7 @@ import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
 import warnings
 
-class SlideScoreAnns(object):
+class SlideScoreAnnotations(object):
     def __init__(self, filename: str, study_id: str):
         self.filename = filename
         self.study_id = study_id
@@ -47,7 +47,7 @@ class SlideScoreAnns(object):
 
         if not len(negative_polygons) == inners_count:
             warnings.warn(
-                f"WARNING: Not all negative_polygons accounted for: {inners_count} / {len(negative_polygons)}.\n"
+                f"Not all negative_polygons accounted for: {inners_count} / {len(negative_polygons)}.\n"
                 f"Indices :{[nidx for nidx, val in used_negatives.items() if not val]}.\n"
                 f"Polygons:{[([pt for pt in negative_polygons[nidx].exterior.coords]) for nidx, val in used_negatives.items() if not val]}.\n"
                 f"Areas   :{[negative_polygons[nidx].area for nidx, val in used_negatives.items() if not val]}.\n"

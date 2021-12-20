@@ -13,7 +13,7 @@ from typing import Optional
 from tqdm import tqdm
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client
-from slidescore_api.utils.annotations import SlideScoreAnns
+from slidescore_api.utils.annotations import SlideScoreAnnotations
 
 PathLike = typing.Union[str, os.PathLike]
 
@@ -131,7 +131,7 @@ def retrieve_questions(
 
 
 def write_shapely_to_disc(slidescore_anns_file: PathLike, study_id: str, author: str, label: str, ann_type: list):
-    reader = SlideScoreAnns(slidescore_anns_file, study_id)
+    reader = SlideScoreAnnotations(slidescore_anns_file, study_id)
     anns = reader.read_slidescore_annotations()
     reader.save_shapely(anns=anns, label=label, author=author, ann_type=ann_type)
 

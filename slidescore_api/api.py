@@ -11,7 +11,7 @@ import shutil
 import sys
 import urllib.parse
 import zipfile
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Iterable
 
 import requests
 from PIL import Image
@@ -258,7 +258,7 @@ class APIClient:
         self._write_to_history(save_dir, write_to.name)
         return write_to
 
-    def get_results(self, study_id: int, **kwargs) -> List[SlideScoreResult]:
+    def get_results(self, study_id: int, **kwargs) -> Iterable[SlideScoreResult]:
         """
         Basic functionality to download all annotations made for a particular study.
         Returns a SlideScoreResult class wrapper containing the information.
@@ -282,7 +282,8 @@ class APIClient:
 
         response = self.perform_request("Scores", {"studyid": study_id, **kwargs})
         rjson = response.json()
-        return [SlideScoreResult(r) for r in rjson]
+        for line in rjson:
+            yield SlideScoreResult(line)
 
     def get_config(self, study_id: int) -> dict:
         """

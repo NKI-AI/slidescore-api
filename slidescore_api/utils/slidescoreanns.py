@@ -192,7 +192,7 @@ class SlideScoreAnns(object):
 
         return anns
 
-    def save_shapely(self, anns: dict, label: str, author:str, ann_type:list):
+    def save_shapely(self, anns: dict, label: str, author: str, ann_type: list):
         for key in anns.keys():
             if anns[key]["author"] == author and anns[key]["label"] == label:
                 slide_name = anns[key]["slidename"]
@@ -201,7 +201,7 @@ class SlideScoreAnns(object):
                 file = open(save_path + label + ".json", "w")
                 for i in range(len(anns[key]["data"])):
                     if anns[key]["data"][i]["type"] in ann_type and len(anns[key]["data"][i]["points"]) > 0:
-                            json.dump(mapping(anns[key]["data"][i]["points"]),file, indent=2)
+                        json.dump(mapping(anns[key]["data"][i]["points"]), file, indent=2)
 
     def filter_anns(self, anns, label, author, ann_type):
         preprocessed_annotations = {}

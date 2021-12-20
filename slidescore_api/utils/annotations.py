@@ -16,10 +16,15 @@ class ImageAnnotation(NamedTuple):
     slide_name: str
     author: str
     label: str
-    annotation: Union[Dict[int, Union[dict, Any]], Dict[int, Union[Union[Dict[str, Union[str, Any]], dict], Any]]]
+    annotation: Union[
+        Dict[int, Union[dict, Any]],
+        Dict[int, Union[Union[Dict[str, Union[str, Any]], dict], Any]],
+    ]
 
 
-def save_shapely(annotations: ImageAnnotation, study_id: str, filter_type: list) -> None:
+def save_shapely(
+    annotations: ImageAnnotation, study_id: str, filter_type: list
+) -> None:
     """
 
     Parameters
@@ -29,13 +34,25 @@ def save_shapely(annotations: ImageAnnotation, study_id: str, filter_type: list)
     filter_type
 
     """
-    save_path = Path(study_id + "/" + "annotations" + "/" + annotations.author + "/" + annotations.slide_name)
+    save_path = Path(
+        study_id
+        + "/"
+        + "annotations"
+        + "/"
+        + annotations.author
+        + "/"
+        + annotations.slide_name
+    )
     save_path.mkdir(parents=True, exist_ok=True)
     file = open(save_path / (annotations.label + ".json"), "w")
     for polygon_id in range(len(annotations.annotation)):
         if annotations.annotation[polygon_id]["type"] in filter_type:
             if len(annotations.annotation[polygon_id]["points"]) > 0:
-                json.dump(mapping(annotations.annotation[polygon_id]["points"]), file, indent=2)
+                json.dump(
+                    mapping(annotations.annotation[polygon_id]["points"]),
+                    file,
+                    indent=2,
+                )
     file.close()
 
 
@@ -107,7 +124,9 @@ def _parse_polygon_annotation(annotations: Dict) -> Dict:
         Dictionary with key type: "brush" and "points" a shapely.geometry.MultiplePolygon
     """
     # returns points: MultiPolygon
-    points: Any = np.array([[pt["x"], pt["y"]] for pt in annotations["points"]], dtype=np.float32)
+    points: Any = np.array(
+        [[pt["x"], pt["y"]] for pt in annotations["points"]], dtype=np.float32
+    )
     if len(points) < 3:
         warnings.warn(f"Invalid polygon: {annotations}")
         points = []
@@ -122,16 +141,24 @@ def _parse_polygon_annotation(annotations: Dict) -> Dict:
 
 def _parse_ellipse_annotation(annotations: Dict) -> Dict:
     # returns center: Point, size: Point
-    if (annotations["center"]["x"] is not None) & (annotations["center"]["y"] is not None):
-        center = np.array([annotations["center"]["x"], annotations["center"]["y"]], dtype=np.float32)
-        size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
+    if (annotations["center"]["x"] is not None) & (
+        annotations["center"]["y"] is not None
+    ):
+        center = np.array(
+            [annotations["center"]["x"], annotations["center"]["y"]], dtype=np.float32
+        )
+        size = np.array(
+            [annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32
+        )
         data = {
             "type": "ellipse",
             "center": Point(center),
             "size": Point(size),
         }
     else:
-        warnings.warn(f"Invalid ellipse: {annotations['center'], annotations['size']}, adding as -1.")
+        warnings.warn(
+            f"Invalid ellipse: {annotations['center'], annotations['size']}, adding as -1."
+        )
         data = {
             "type": "ellipse",
             "center": Point(-1, -1),
@@ -142,8 +169,12 @@ def _parse_ellipse_annotation(annotations: Dict) -> Dict:
 
 def _parse_rect_annotation(annotations: Dict) -> Dict:
     # returns corner: Point, size: Point
-    corner = np.array([annotations["corner"]["x"], annotations["corner"]["y"]], dtype=np.float32)
-    size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
+    corner = np.array(
+        [annotations["corner"]["x"], annotations["corner"]["y"]], dtype=np.float32
+    )
+    size = np.array(
+        [annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32
+    )
     data = {
         "type": "rect",
         "corner": Point(corner),
@@ -154,7 +185,9 @@ def _parse_rect_annotation(annotations: Dict) -> Dict:
 
 def _parse_points_annotation(annotations: Dict) -> Dict:
     # returns points: MultiPoint
-    points = np.array([[_ann["x"], _ann["y"]] for _ann in annotations], dtype=np.float32)
+    points = np.array(
+        [[_ann["x"], _ann["y"]] for _ann in annotations], dtype=np.float32
+    )
     data = {
         "type": "points",
         "points": MultiPoint(points),
@@ -187,10 +220,6 @@ class SlideScoreAnnotations:
             for line in annotation_file:
                 yield line
 
-    def api_iterator(self, annotations):
-        for annotation in annotations:
-            yield annotation.to_row()
-
     def _parse_annotation_row(self, row, filter_empty):
         _row = {k: v for k, v in zip(self._headers, row.split("\t"))}
         data = {}
@@ -214,7 +243,9 @@ class SlideScoreAnnotations:
                     data[0] = self._parse_fns["points"](ann)
 
                 else:
-                    raise NotImplementedError(f"label_type ( {label_type} ) not implemented.")
+                    raise NotImplementedError(
+                        f"label_type ( {label_type} ) not implemented."
+                    )
 
             elif filter_empty:
                 return None
@@ -229,7 +260,10 @@ class SlideScoreAnnotations:
 
     def check(self) -> None:
         # Make sure we accounted for everything
-        if self.num_entries != self.annotations_generated + self.unannotated + self.num_empty:
+        if (
+            self.num_entries
+            != self.annotations_generated + self.unannotated + self.num_empty
+        ):
             raise RuntimeError(
                 f"Some rows were missed. \nParsed: {self.annotations_generated + self.num_empty}, Read: {self.num_entries}"
             )
@@ -238,7 +272,11 @@ class SlideScoreAnnotations:
         print("Total empty entries: ", self.num_empty)
 
     def from_iterable(
-        self, row_iterator: Iterable, filter_author: str = None, filter_label: str = None, filter_empty=True
+        self,
+        row_iterator: Iterable,
+        filter_author: str = None,
+        filter_label: str = None,
+        filter_empty=True,
     ) -> Iterable:
         """
         Function to convert slidescore annotations (txt file) to an iterable.
@@ -281,7 +319,10 @@ class SlideScoreAnnotations:
             )
 
             if filter_author is not None or filter_label is not None:
-                if row_annotation.author != filter_author or row_annotation.label != filter_label:
+                if (
+                    row_annotation.author != filter_author
+                    or row_annotation.label != filter_label
+                ):
                     self.unannotated += 1
                     continue
             self.annotations_generated += 1

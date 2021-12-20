@@ -6,7 +6,7 @@ import os
 import pickle
 import warnings
 from pathlib import Path
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Iterable
 from typing import NamedTuple
 
 import numpy as np
@@ -208,7 +208,7 @@ class SlideScoreAnnotations:
 
         return _row, data
 
-    def parse_annotations(self, filter_empty=True) -> None:
+    def annotations_generator(self, filter_empty=True) -> Iterable:
         """
         Function to convert slidescore annotations (txt file) to dictionary.
 
@@ -236,15 +236,13 @@ class SlideScoreAnnotations:
         num_empty = 0
         num_entries, rows = self.read_annotation_file()
 
-        annotations = {}
-        for row_idx, row in enumerate(rows):
+        for row in rows:
             _return = self._parse_annotation_row(row, filter_empty=filter_empty)
             if _return is None:
                 num_empty += 1
                 continue
 
             _row, data = _return
-
             curr_annotation = ImageAnnotation(
                 image_id=_row["ImageID"],
                 slide_name=_row["Image Name"],
@@ -254,12 +252,6 @@ class SlideScoreAnnotations:
             )
             yield curr_annotation
 
-            # annotations[row_idx] = curr_annotation
-        # # Make sure we accounted for everything
-        # if num_entries != len(annotations) + num_empty:
-        #     raise RuntimeError(f"Some rows were missed. \nParsed: {len(annotations) + num_empty}, Read: {num_entries}")
-        #
-        # self.__annotations = annotations
 
     def save_shapely(self, label: str, author: str, ann_type: List):
         if self.__annotations is None:
@@ -324,7 +316,15 @@ class SlideScoreAnnotations:
 
 if __name__ == "__main__":
     reader = SlideScoreAnnotations(Path("/Users/jteuwen/Downloads/TISSUE_COMPARTMENTS_21_12_20_48.txt"), "465")
-    for curr_annotation in reader.parse_annotations():
+
+    # TODO: Put this somewhere
+    # annotations[row_idx] = curr_annotation
+    # # Make sure we accounted for everything
+    # if num_entries != len(annotations) + num_empty:
+    #     raise RuntimeError(f"Some rows were missed. \nParsed: {len(annotations) + num_empty}, Read: {num_entries}")
+    #
+
+    for idx, curr_annotation in enumerate(reader.annotations_generator()):
         print(curr_annotation)
     reader.save_shapely(label="specimen", author="a.karkala@nki.nl", ann_type=["brush", "polygon"])
     print()

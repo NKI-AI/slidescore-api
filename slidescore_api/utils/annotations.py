@@ -14,7 +14,7 @@ from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
 PathLike = Union[str, os.PathLike]
 
 
-class SlideScoreAnnotations(object):
+class SlideScoreAnnotations:
     headers = ["ImageID", "Image Name", "By", "Question", "Answer"]
 
     def __init__(self, filename: PathLike, study_id: str):
@@ -244,12 +244,12 @@ class SlideScoreAnnotations(object):
         for key in anns.keys():
             if anns[key]["author"] == author and anns[key]["label"] == label:
                 slide_name = anns[key]["slidename"]
-                save_path = self.study_id + "/" + "annotations" + "/" + slide_name + "/"
-                Path(save_path).mkdir(parents=True, exist_ok=True)
-                file = open(save_path + label + ".json", "w")
-                for i in range(len(anns[key]["data"])):
-                    if anns[key]["data"][i]["type"] in ann_type and len(anns[key]["data"][i]["points"]) > 0:
-                        json.dump(mapping(anns[key]["data"][i]["points"]), file, indent=2)
+                save_path = Path(self.study_id) / "annotations" / slide_name
+                save_path.mkdir(parents=True, exist_ok=True)
+                with open(save_path / (label + ".json"), "w") as file:
+                    for idx in range(len(anns[key]["data"])):
+                        if anns[key]["data"][idx]["type"] in ann_type and len(anns[key]["data"][idx]["points"]) > 0:
+                            json.dump(mapping(anns[key]["data"][idx]["points"]), file, indent=2)
 
     @staticmethod
     def filter_annotations(annotations: Dict, label, author, ann_type) -> Dict:
@@ -290,3 +290,6 @@ class SlideScoreAnnotations(object):
                 pickle.dump(mycoordslist, file)
                 file.close()
         return mycoordslist
+
+if __name__ == "__main__":
+    annotations = SlideScoreAnnotations(Path("/Users/jteuwen/Downloads/TISSUE_COMPARTMENTS_21_12_20_48.txt"), "465")

@@ -1,4 +1,3 @@
-#!/home/ajey/miniconda3/bin/python3
 # coding=utf-8
 # Copyright (c) Jonas Teuwen
 import argparse
@@ -10,16 +9,24 @@ import pathlib
 import sys
 from pathlib import Path
 from typing import Optional
+from enum import Enum
 
 from tqdm import tqdm
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client
+from slidescore_api.logging import build_cli_logger
 from slidescore_api.utils.annotations import SlideScoreAnnotations, save_shapely
 
 logger = logging.getLogger(__name__)
 
 # TODO: This are the names of the shapes.
 ANNOSHAPE_TYPES = ["polygon", "rect", "ellipse", "brush", "heatmap"]
+
+
+class LabelOutputType(Enum):
+    json: str = "json"
+    raw: str = "str"
+    shapely: str = "shapely"
 
 
 def parse_api_token(data: Optional[Path] = None) -> str:
@@ -131,16 +138,38 @@ def retrieve_questions(
 
 def write_shapely_to_disc(annotation_file_path: Path, study_id: str, author: str, label: str, ann_type: list) -> None:
     reader = SlideScoreAnnotations(Path(annotation_file_path))
-    for idx, curr_annotation in enumerate(reader.annotations_from_iterable(filter_author=author, filter_label=label)):
+    for idx, curr_annotation in enumerate(reader.from_iterable(filter_author=author, filter_label=label)):
         save_shapely(curr_annotation, study_id=study_id, filter_type=ann_type)
     reader.check()
 
+
+def _save_label_as_json(save_dir, image_id, image, annotations):
+    annotation_data = {
+        "image_id": image_id,
+        "study_id": image["studyID"],  # TODO: image must become a class / NamedTuple
+        "image_name": image["name"],
+        "annotations": [],
+    }
+
+    for annotation in annotations:
+        data = annotation.points
+        if not data:
+            continue
+
+        annotation_data["annotations"].append(
+            {"user": annotation.user, "question": annotation.question, "data": data}
+        )
+
+    # Now save this to JSON.
+    with open(save_dir / f"{image_id}.json", "w") as file:
+        json.dump(annotation_data, file, indent=2)
 
 def download_labels(
     slidescore_url: str,
     api_token: str,
     study_id: int,
     save_dir: Path,
+    output_type: LabelOutputType,
     email: Optional[str] = None,
     question: Optional[str] = None,
     disable_certificate_check: bool = False,
@@ -189,26 +218,19 @@ def download_labels(
         image_id = image["id"]
         annotations = client.get_results(study_id, imageid=image_id, **extra_kwargs)
 
-        annotation_data = {
-            "image_id": image_id,
-            "study_id": image["studyID"],  # TODO: image must become a class / NamedTuple
-            "image_name": image["name"],
-            "annotations": [],
-        }
-
-        for annotation in annotations:
-            data = annotation.points
-            if not data:
-                continue
-
-            annotation_data["annotations"].append(
-                {"user": annotation.user, "question": annotation.question, "data": data}
-            )
-
-        # Now save this to JSON.
-        with open(save_dir / f"{image_id}.json", "w") as file:
-            json.dump(annotation_data, file, indent=2)
-
+        if output_type == output_type.json:
+            _save_label_as_json(save_dir, image_id, image, annotations)
+        elif output_type == output_type.raw:
+            with open("annotations.txt", "a") as f:
+                for annotation in annotations:
+                    f.write(annotation + "\n")
+        elif output_type == output_type.shapely:
+            annotation_parser = SlideScoreAnnotations()
+            row_iterator = annotation_parser.api_iterator(annotations)
+            for idx, curr_annotation in enumerate(annotation_parser.from_iterable(row_iterator)):
+                print(curr_annotation)
+        else:
+            raise RuntimeError(f"Output type not supported.")
 
 def _download_labels(args: argparse.Namespace) -> None:
     """Main function that downloads labels from SlideScore.
@@ -222,13 +244,14 @@ def _download_labels(args: argparse.Namespace) -> None:
     -------
     None
     """
-    # build_cli_logger("download_labels", log_to_file=not args.no_log, verbosity_level=args.verbose)
+    build_cli_logger("download_labels", log_to_file=not args.no_log, verbosity_level=args.verbose)
     api_token = parse_api_token(args.token_path)
     download_labels(
         args.slidescore_url,
         api_token,
         args.study_id,
         args.output_dir,
+        output_type=args.output_type,
         question=args.question,
         email=args.user,
         disable_certificate_check=args.disable_certificate_check,
@@ -361,6 +384,14 @@ def register_parser(parser: argparse._SubParsersAction):
         required=False,
     )
     download_label_parser.add_argument(
+        "-o"
+        "--output-type",
+        dest="output_type",
+        help="Type of output (AJEY IMPROVE THIS)",
+        choices=LabelOutputType.__members__,
+        default=LabelOutputType.shapely,
+    )
+    download_label_parser.add_argument(
         "output_dir",
         type=pathlib.Path,
         help="Directory to save output too.",
@@ -435,6 +466,12 @@ def cli():
         help="Disable the certificate check.",
         action="store_true",
     )
+    slidescore_parser.add_argument(
+        "--no-log",
+        help="Disable logging.",
+        action="store_true",
+    )
+    slidescore_parser.add_argument("-v", "--verbose", action="count", help="Verbosity level, e.g. -v, -vv, -vvv", default=0)
 
     slidescore_subparsers = slidescore_parser.add_subparsers(help="Possible SlideScore CLI utils to run.")
     slidescore_subparsers.required = True
@@ -445,3 +482,7 @@ def cli():
 
     args = slidescore_parser.parse_args()
     args.subcommand(args)
+
+
+if __name__ == "__main__":
+    cli()

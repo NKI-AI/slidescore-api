@@ -187,6 +187,10 @@ class SlideScoreAnnotations:
             for line in annotation_file:
                 yield line
 
+    def api_iterator(self, annotations):
+        for annotation in annotations:
+            yield annotation
+
     def _parse_annotation_row(self, row, filter_empty):
         _row = {k: v for k, v in zip(self._headers, row.split("\t"))}
         data = {}
@@ -233,7 +237,7 @@ class SlideScoreAnnotations:
         print("Total unannotated images: ", self.unannotated)
         print("Total empty entries: ", self.num_empty)
 
-    def annotations_from_iterable(
+    def from_iterable(
         self, row_iterator: Iterable, filter_author: str = None, filter_label: str = None, filter_empty=True
     ) -> Iterable:
         """
@@ -294,7 +298,7 @@ if __name__ == "__main__":
 
     row_iterator = reader.annotation_file_iterator(path)
 
-    for idx, curr_annotation in enumerate(reader.annotations_from_iterable(row_iterator)):
+    for idx, curr_annotation in enumerate(reader.from_iterable(row_iterator)):
         print(curr_annotation)
         # save_shapely(curr_annotation, study_id="642", filter_type=ann_type)
     reader.check()

@@ -20,6 +20,7 @@ class SlideScoreAnnotations:
     def __init__(self, filename: PathLike, study_id: str):
         self.filename = filename
         self.study_id = study_id
+        self.__is_parsed = False
 
     @staticmethod
     def _parse_brush_annotation(annotations: Dict) -> Dict:
@@ -155,7 +156,7 @@ class SlideScoreAnnotations:
         rows = entries[1:]
         return num_entries, rows
 
-    def read_slidescore_annotations(self, filter_empty=True) -> Dict[int, Dict]:
+    def parse_annotations(self, filter_empty=True) -> Dict[int, Dict]:
         """
         Function to convert slidescore annotations (txt file) to dictionary.
 
@@ -238,9 +239,13 @@ class SlideScoreAnnotations:
         if num_entries != len(annotations) + num_empty:
             raise RuntimeError(f"Some rows were missed. \nParsed: {len(annotations) + num_empty}, Read: {num_entries}")
 
+        self.__is_parsed = True
         return annotations
 
     def save_shapely(self, anns: dict, label: str, author: str, ann_type: list):
+        if not self.__is_parsed:
+            raise RuntimeError(f"Cannot save to shapely. First parse the annotations using `parse_annotations()`.")
+
         for key in anns.keys():
             if anns[key]["author"] == author and anns[key]["label"] == label:
                 slide_name = anns[key]["slidename"]
@@ -296,4 +301,7 @@ class SlideScoreAnnotations:
 
 
 if __name__ == "__main__":
-    annotations = SlideScoreAnnotations(Path("/Users/jteuwen/Downloads/TISSUE_COMPARTMENTS_21_12_20_48.txt"), "465")
+    reader = SlideScoreAnnotations(Path("/Users/jteuwen/Downloads/TISSUE_COMPARTMENTS_21_12_20_48.txt"), "465")
+
+    anns = reader.parse_annotations()
+    reader.save_shapely(anns=anns, label=label, author=author, ann_type=ann_type)

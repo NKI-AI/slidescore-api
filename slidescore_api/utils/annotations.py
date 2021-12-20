@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, NamedTuple, Union
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
 
+
 class ImageAnnotation(NamedTuple):
     slide_name: str
     author: str

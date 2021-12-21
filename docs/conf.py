@@ -13,6 +13,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 import ast
+
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory is
 # relative to the documentation root, use os.path.abspath to make it
@@ -122,9 +123,7 @@ from packaging.version import parse
 
 v = parse(release)
 if v.release is None:
-    raise ValueError(
-        "Ill-formed version: {!r}. Version should follow " "PEP440".format(version)
-    )
+    raise ValueError("Ill-formed version: {!r}. Version should follow " "PEP440".format(version))
 
 if v.is_devrelease:
     binder_branch = "main"
@@ -201,9 +200,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, "slidescore_api", "SlideScore API Documentation", [author], 1)
-]
+man_pages = [(master_doc, "slidescore_api", "SlideScore API Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------
@@ -275,16 +272,9 @@ def linkcode_resolve(domain, info):
     fn = relpath(fn, start=dirname(slidescore_api.__file__))
 
     if "dev" in slidescore_api.__version__:
-        return (
-            "https://github.com/NKI-AI/slidescore-api/blob/"
-            "main/slidescore_api/%s%s" % (fn, linespec)
-        )
-    return (
-        "https://github.com/NKI-AI/slidescore-api/blob/"
-        "v%s/slidescore_api/%s%s"
-        % (
-            slidescore_api.__version__,
-            fn,
-            linespec,
-        )
+        return "https://github.com/NKI-AI/slidescore-api/blob/" "main/slidescore_api/%s%s" % (fn, linespec)
+    return "https://github.com/NKI-AI/slidescore-api/blob/" "v%s/slidescore_api/%s%s" % (
+        slidescore_api.__version__,
+        fn,
+        linespec,
     )

@@ -108,7 +108,8 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:
         warnings.warn(
             f"Not all negative_polygons accounted for: {inners_count} / {len(negative_polygons)}.\n"
             f"Indices :{[nidx for nidx, val in used_negatives.items() if not val]}.\n"
-            f"Polygons:{[list(negative_polygons[idx].exterior.coords) for idx, val in used_negatives.items() if not val]}.\n"
+            f"Polygons:"
+            f"{[list(negative_polygons[idx].exterior.coords) for idx, val in used_negatives.items() if not val]}.\n"
             f"Areas   :{[negative_polygons[nidx].area for nidx, val in used_negatives.items() if not val]}.\n"
         )
 

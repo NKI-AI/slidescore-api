@@ -5,6 +5,7 @@
 import json
 import os
 import warnings
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Iterable, NamedTuple, Union
 
@@ -22,38 +23,46 @@ class ImageAnnotation(NamedTuple):
     ]
 
 
-def save_shapely(
-    annotations: ImageAnnotation, study_id: str, filter_type: list
-) -> None:
-    """
+class AnnotationType(Enum):
+    polygon: str = "polygon"
+    rect: str = "rect"
+    ellipse: str = "ellipse"
+    brush: str = "brush"
+    heatmap: str = "heatmap"
 
+
+def _check_type_error(filter_type: list) -> None:
+    for f_type in filter_type:
+        if f_type not in list(AnnotationType.__members__):
+            raise TypeError("Annotation type " + f_type + " is not supported.")
+
+
+def _save_polygon_as_shapely(annotations, polygon_id, file):
+    if len(annotations.annotation[polygon_id]["points"]) > 0:
+        json.dump(
+            mapping(annotations.annotation[polygon_id]["points"]),
+            file,
+            indent=2,
+        )
+
+
+def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list) -> None:
+    """
     Parameters
     ----------
     annotations
-    study_id
+    save_dir
     filter_type
 
     """
-    save_path = Path(
-        study_id
-        + "/"
-        + "annotations"
-        + "/"
-        + annotations.author
-        + "/"
-        + annotations.slide_name
-    )
+    _check_type_error(filter_type)
+    save_path = save_dir / Path("annotations" + "/" + annotations.author + "/" + annotations.slide_name)
     save_path.mkdir(parents=True, exist_ok=True)
-    file = open(save_path / (annotations.label + ".json"), "w")
-    for polygon_id in range(len(annotations.annotation)):
-        if annotations.annotation[polygon_id]["type"] in filter_type:
-            if len(annotations.annotation[polygon_id]["points"]) > 0:
-                json.dump(
-                    mapping(annotations.annotation[polygon_id]["points"]),
-                    file,
-                    indent=2,
-                )
-    file.close()
+    with open(save_path / (annotations.label + ".json"), "w") as file:
+        for polygon_id in range(len(annotations.annotation)):
+            # TODO: Handle for different kinds of Annotation Types
+            if annotations.annotation[polygon_id]["type"] == AnnotationType.polygon.value:
+                _save_polygon_as_shapely(annotations, polygon_id, file)
 
 
 def _parse_brush_annotation(annotations: Dict) -> Dict:
@@ -124,9 +133,7 @@ def _parse_polygon_annotation(annotations: Dict) -> Dict:
         Dictionary with key type: "brush" and "points" a shapely.geometry.MultiplePolygon
     """
     # returns points: MultiPolygon
-    points: Any = np.array(
-        [[pt["x"], pt["y"]] for pt in annotations["points"]], dtype=np.float32
-    )
+    points: Any = np.array([[pt["x"], pt["y"]] for pt in annotations["points"]], dtype=np.float32)
     if len(points) < 3:
         warnings.warn(f"Invalid polygon: {annotations}")
         points = []
@@ -141,24 +148,16 @@ def _parse_polygon_annotation(annotations: Dict) -> Dict:
 
 def _parse_ellipse_annotation(annotations: Dict) -> Dict:
     # returns center: Point, size: Point
-    if (annotations["center"]["x"] is not None) & (
-        annotations["center"]["y"] is not None
-    ):
-        center = np.array(
-            [annotations["center"]["x"], annotations["center"]["y"]], dtype=np.float32
-        )
-        size = np.array(
-            [annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32
-        )
+    if (annotations["center"]["x"] is not None) & (annotations["center"]["y"] is not None):
+        center = np.array([annotations["center"]["x"], annotations["center"]["y"]], dtype=np.float32)
+        size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
         data = {
             "type": "ellipse",
             "center": Point(center),
             "size": Point(size),
         }
     else:
-        warnings.warn(
-            f"Invalid ellipse: {annotations['center'], annotations['size']}, adding as -1."
-        )
+        warnings.warn(f"Invalid ellipse: {annotations['center'], annotations['size']}, adding as -1.")
         data = {
             "type": "ellipse",
             "center": Point(-1, -1),
@@ -169,12 +168,8 @@ def _parse_ellipse_annotation(annotations: Dict) -> Dict:
 
 def _parse_rect_annotation(annotations: Dict) -> Dict:
     # returns corner: Point, size: Point
-    corner = np.array(
-        [annotations["corner"]["x"], annotations["corner"]["y"]], dtype=np.float32
-    )
-    size = np.array(
-        [annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32
-    )
+    corner = np.array([annotations["corner"]["x"], annotations["corner"]["y"]], dtype=np.float32)
+    size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
     data = {
         "type": "rect",
         "corner": Point(corner),
@@ -185,9 +180,7 @@ def _parse_rect_annotation(annotations: Dict) -> Dict:
 
 def _parse_points_annotation(annotations: Dict) -> Dict:
     # returns points: MultiPoint
-    points = np.array(
-        [[_ann["x"], _ann["y"]] for _ann in annotations], dtype=np.float32
-    )
+    points = np.array([[_ann["x"], _ann["y"]] for _ann in annotations], dtype=np.float32)
     data = {
         "type": "points",
         "points": MultiPoint(points),
@@ -243,9 +236,7 @@ class SlideScoreAnnotations:
                     data[0] = self._parse_fns["points"](ann)
 
                 else:
-                    raise NotImplementedError(
-                        f"label_type ( {label_type} ) not implemented."
-                    )
+                    raise NotImplementedError(f"label_type ( {label_type} ) not implemented.")
 
             elif filter_empty:
                 return None
@@ -257,19 +248,6 @@ class SlideScoreAnnotations:
                 return None
 
         return _row, data
-
-    def check(self) -> None:
-        # Make sure we accounted for everything
-        if (
-            self.num_entries
-            != self.annotations_generated + self.unannotated + self.num_empty
-        ):
-            raise RuntimeError(
-                f"Some rows were missed. \nParsed: {self.annotations_generated + self.num_empty}, Read: {self.num_entries}"
-            )
-        print("Total annotated images: ", self.annotations_generated)
-        print("Total unannotated images: ", self.unannotated)
-        print("Total empty entries: ", self.num_empty)
 
     def from_iterable(
         self,
@@ -319,10 +297,7 @@ class SlideScoreAnnotations:
             )
 
             if filter_author is not None or filter_label is not None:
-                if (
-                    row_annotation.author != filter_author
-                    or row_annotation.label != filter_label
-                ):
+                if row_annotation.author != filter_author or row_annotation.label != filter_label:
                     self.unannotated += 1
                     continue
             self.annotations_generated += 1
@@ -341,5 +316,4 @@ if __name__ == "__main__":
 
     for idx, curr_annotation in enumerate(reader.from_iterable(row_iterator)):
         print(curr_annotation)
-        # save_shapely(curr_annotation, study_id="642", filter_type=ann_type)
-    reader.check()
+        save_shapely(curr_annotation, save_dir=Path("test"), filter_type=ann_type)

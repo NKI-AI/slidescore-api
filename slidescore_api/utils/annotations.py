@@ -24,17 +24,17 @@ class ImageAnnotation(NamedTuple):
 
 
 class AnnotationType(Enum):
-    polygon: str = "polygon"
-    rect: str = "rect"
-    ellipse: str = "ellipse"
-    brush: str = "brush"
-    heatmap: str = "heatmap"
+    POLYGON: str = "polygon"
+    RECT: str = "rect"
+    ELLIPSE: str = "ellipse"
+    BRUSH: str = "brush"
+    HEATMAP: str = "heatmap"
 
 
 def _check_type_error(filter_type: list) -> None:
     for f_type in filter_type:
         if f_type not in list(AnnotationType.__members__):
-            raise TypeError("Annotation type " + f_type + " is not supported.")
+            raise TypeError(f"Annotation type {f_type} is not supported.")
 
 
 def _save_polygon_as_shapely(annotations, polygon_id, file):
@@ -61,7 +61,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     with open(save_path / (annotations.label + ".json"), "w") as file:
         for polygon_id in range(len(annotations.annotation)):
             # TODO: Handle for different kinds of Annotation Types
-            if annotations.annotation[polygon_id]["type"] == AnnotationType.polygon.value:
+            if annotations.annotation[polygon_id]["type"] == AnnotationType.POLYGON.value:
                 _save_polygon_as_shapely(annotations, polygon_id, file)
 
 

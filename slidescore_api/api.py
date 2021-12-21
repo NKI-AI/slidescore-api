@@ -10,7 +10,6 @@ import re
 import shutil
 import sys
 import urllib.parse
-import zipfile
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import requests
@@ -196,7 +195,7 @@ class APIClient:
         # TODO: Convert to NamedTuple
         response = self.perform_request("Images", {"studyid": study_id})
         rjson = response.json()
-        self.logger.info(f"found {len(rjson)} slides with SlideScore API for study ID {study_id}.")
+        self.logger.info("Found %s slides with SlideScore API for study ID %s.", len(rjson), study_id)
 
         return rjson
 
@@ -237,12 +236,12 @@ class APIClient:
 
         raw = response.headers["Content-Disposition"]
         filename = self._get_filename(raw)
-        self.logger.info(f"Writing to {save_dir / filename} (reporting file size of {filesize})...")
+        self.logger.info("Writing to %s (reporting file size of %s)...", save_dir / filename, filesize)
         write_to = save_dir / filename
         history = self._read_from_history(save_dir)
 
         if skip_if_exists and str(filename) in history:
-            self.logger.info(f"File {save_dir / filename} already downloaded. Skipping.")
+            self.logger.info("File %s already downloaded. Skipping.", save_dir / filename)
             response.close()
             return write_to
 
@@ -254,9 +253,9 @@ class APIClient:
             miniters=1,
             desc=filename,
             total=None,
-        ) as f:
+        ) as file:
             for chunk in response.iter_content(chunk_size=4096):
-                f.write(chunk)
+                file.write(chunk)
         shutil.move(str(temp_write_to), str(write_to))
 
         self._write_to_history(save_dir, write_to.name)
@@ -430,7 +429,7 @@ class APIClient:
         """
         (self.base_url, self.cookie) = self.get_image_server_url(image_id)
 
-    def get_tile(self, level: int, x: int, y: int) -> Image:
+    def get_tile(self, level: int, x_coord: int, y_coord: int) -> Image:
         """
         Gets tile from WSI for given magnification level.
         A WSI at any given magnification level is converted into an x by y tile matrix. This method downloads the tile
@@ -441,8 +440,8 @@ class APIClient:
         Parameters
         ----------
         level : int
-        x : x
-        y : x
+        x_coord : x
+        y_coord : x
 
         Returns
         -------
@@ -453,7 +452,7 @@ class APIClient:
             raise RuntimeError
 
         response = requests.get(
-            self.base_url + f"/{str(level)}/{str(x)}_{str(y)}.jpeg",
+            self.base_url + f"/{str(level)}/{str(x_coord)}_{str(y_coord)}.jpeg",
             stream=True,
             cookies=dict(t=self.cookie),
         )
@@ -462,25 +461,25 @@ class APIClient:
         raise SlideScoreErrorException(f"Expected response code 200. Got {response.status_code}.")
 
     @staticmethod
-    def _get_filename(s: str) -> str:
+    def _get_filename(string: str) -> str:
         """
         Method to extract the filename from the HTTP header.
 
         Parameters
         ----------
-        s : str
+        string : str
 
         Returns
         -------
         str
             Filename extracted from HTTP header.
         """
-        filename = re.findall(r"filename\*?=([^;]+)", s, flags=re.IGNORECASE)
+        filename = re.findall(r"filename\*?=([^;]+)", string, flags=re.IGNORECASE)
         return filename[0].strip().strip('"')
 
     @staticmethod
     def _write_to_history(save_dir: pathlib.Path, filename: Union[str, pathlib.Path]):
-        with open(save_dir / ".download_history.txt", "a") as file:
+        with open(save_dir / ".download_history.txt", "a", encoding="utf-8") as file:
             file.write(f"{filename}\n")
 
     @staticmethod
@@ -489,7 +488,7 @@ class APIClient:
         if not history_filename.is_file():
             return []
 
-        with open(history_filename, "r") as file:
+        with open(history_filename, "r", encoding="utf-8") as file:
             content = file.readlines()
 
         content = [_.strip() for _ in content]
@@ -498,8 +497,6 @@ class APIClient:
 
 class SlideScoreErrorException(Exception):
     """Class to hold a SlideScore exception."""
-
-    pass
 
 
 def build_client(slidescore_url: str, api_token: str, disable_certificate_check: bool = False) -> APIClient:
@@ -522,11 +519,11 @@ def build_client(slidescore_url: str, api_token: str, disable_certificate_check:
     """
     try:
         client = APIClient(slidescore_url, api_token, disable_cert_checking=disable_certificate_check)
-    except requests.exceptions.SSLError as e:
+    except requests.exceptions.SSLError as exception:
         sys.exit(
             f"SSLError, possibly because the SSL certificate cannot be read. "
             f"If you know what you are doing you can try --disable-certificate-check. "
-            f"Full error: {e}"
+            f"Full error: {exception}"
         )
 
     return client

@@ -9,14 +9,13 @@ import pathlib
 import sys
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Iterable
+from typing import Iterable, Optional
 
 from tqdm import tqdm
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client
 from slidescore_api.logging import build_cli_logger
-from slidescore_api.utils.annotations import (SlideScoreAnnotations,
-                                              save_shapely)
+from slidescore_api.utils.annotations import SlideScoreAnnotations, save_shapely
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ ANNOSHAPE_TYPES = ["polygon", "rect", "ellipse", "brush", "heatmap"]
 
 class LabelOutputType(Enum):
     json: str = "json"
-    raw: str = "str"
+    raw: str = "raw"
     shapely: str = "shapely"
 
 
@@ -84,9 +83,7 @@ def _upload_labels(args: argparse.Namespace) -> None:
         csv.field_size_limit(int(sys.maxsize / 10))
 
     with open(args.results_file, "r") as csvfile:
-        reader = csv.DictReader(
-            csvfile, delimiter=args.csv_delimiter, fieldnames=args.csv_fieldnames
-        )
+        reader = csv.DictReader(csvfile, delimiter=args.csv_delimiter, fieldnames=args.csv_fieldnames)
         for row in reader:
             image_id = row["imageID"]
             image_name = row["imageName"]
@@ -141,6 +138,7 @@ def retrieve_questions(
     scores = config["scores"]
     return scores
 
+
 #
 # def write_shapely_to_disc(
 #     annotation_file_path: Path, study_id: str, author: str, label: str, ann_type: list
@@ -166,9 +164,7 @@ def _save_label_as_json(save_dir, image_id, image, annotations):
         if not data:
             continue
 
-        annotation_data["annotations"].append(
-            {"user": annotation.user, "question": annotation.question, "data": data}
-        )
+        annotation_data["annotations"].append({"user": annotation.user, "question": annotation.question, "data": data})
 
     # Now save this to JSON.
     with open(save_dir / f"{image_id}.json", "w") as file:
@@ -244,11 +240,10 @@ def download_labels(
             annotation_parser = SlideScoreAnnotations()
             row_iterator = _row_iterator(annotations)
 
-            for idx, curr_annotation in enumerate(
-                annotation_parser.from_iterable(row_iterator)
-            ):
+            for idx, curr_annotation in enumerate(annotation_parser.from_iterable(row_iterator)):
                 # TODO: Ajey, for you to debug ;-)
-                print(curr_annotation)
+                save_shapely(curr_annotation, study_id="638", filter_type=["brush", "polygon"])
+            annotation_parser.check()
         else:
             raise RuntimeError(f"Output type not supported.")
 
@@ -265,9 +260,7 @@ def _download_labels(args: argparse.Namespace) -> None:
     -------
     None
     """
-    build_cli_logger(
-        "download_labels", log_to_file=not args.no_log, verbosity_level=args.verbose
-    )
+    build_cli_logger("download_labels", log_to_file=not args.no_log, verbosity_level=args.verbose)
     api_token = parse_api_token(args.token_path)
     download_labels(
         args.slidescore_url,
@@ -280,6 +273,7 @@ def _download_labels(args: argparse.Namespace) -> None:
         disable_certificate_check=args.disable_certificate_check,
     )
 
+
 #
 # def _write_shapely_to_disc(args: argparse.Namespace) -> None:
 #     write_shapely_to_disc(
@@ -287,9 +281,7 @@ def _download_labels(args: argparse.Namespace) -> None:
 #     )
 
 
-def append_to_manifest(
-    save_dir: pathlib.Path, image_id: int, filename: pathlib.Path
-) -> None:
+def append_to_manifest(save_dir: pathlib.Path, image_id: int, filename: pathlib.Path) -> None:
     """
     Create a manifest mapping image id to the filename.
 
@@ -373,9 +365,7 @@ def _download_wsi(args: argparse.Namespace):
 def register_parser(parser: argparse._SubParsersAction):
     """Register slidescore commands to a root parser."""
     # Download slides to a subfolder
-    download_wsi_parser = parser.add_parser(
-        "download-wsis", help="Download WSIs from SlideScore."
-    )
+    download_wsi_parser = parser.add_parser("download-wsis", help="Download WSIs from SlideScore.")
     download_wsi_parser.add_argument(
         "output_dir",
         type=pathlib.Path,
@@ -384,9 +374,7 @@ def register_parser(parser: argparse._SubParsersAction):
 
     download_wsi_parser.set_defaults(subcommand=_download_wsi)
 
-    download_label_parser = parser.add_parser(
-        "download-labels", help="Download labels from SlideScore."
-    )
+    download_label_parser = parser.add_parser("download-labels", help="Download labels from SlideScore.")
     download_label_parser.add_argument(
         "-q",
         "--question",
@@ -418,9 +406,7 @@ def register_parser(parser: argparse._SubParsersAction):
     )
     download_label_parser.set_defaults(subcommand=_download_labels)
 
-    upload_label_parser = parser.add_parser(
-        "upload-labels", help="Upload labels to SlideScore."
-    )
+    upload_label_parser = parser.add_parser("upload-labels", help="Upload labels to SlideScore.")
     upload_label_parser.add_argument(
         "--csv-delimiter",
         type=str,
@@ -462,9 +448,7 @@ def cli():
     Console script for SlideScore API.
     """
     # From https://stackoverflow.com/questions/17073688/how-to-use-argparse-subparsers-correctly
-    slidescore_parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
+    slidescore_parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     slidescore_parser.add_argument(
         "--slidescore-url",
         type=str,
@@ -506,9 +490,7 @@ def cli():
         default=0,
     )
 
-    slidescore_subparsers = slidescore_parser.add_subparsers(
-        help="Possible SlideScore CLI utils to run."
-    )
+    slidescore_subparsers = slidescore_parser.add_subparsers(help="Possible SlideScore CLI utils to run.")
     slidescore_subparsers.required = True
     slidescore_subparsers.dest = "subcommand"
 

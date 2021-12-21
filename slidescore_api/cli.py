@@ -29,6 +29,14 @@ class LabelOutputType(Enum):
     shapely: str = "shapely"
 
 
+class AnnotationType(Enum):
+    polygon: str = "polygon"
+    rect: str = "rect"
+    ellipse: str = "ellipse"
+    brush: str = "brush"
+    heatmap: str = "heatmap"
+
+
 def parse_api_token(data: Optional[Path] = None) -> str:
     """
     Parse the API token from file or from the SLIDESCORE_API_KEY. If file is given, this will overwrite the
@@ -182,6 +190,7 @@ def download_labels(
     study_id: int,
     save_dir: Path,
     output_type: LabelOutputType,
+    ann_type: list,
     email: Optional[str] = None,
     question: Optional[str] = None,
     disable_certificate_check: bool = False,
@@ -233,7 +242,7 @@ def download_labels(
         if output_type == LabelOutputType.json.value:
             _save_label_as_json(save_dir, image_id, image, annotations)
         elif output_type == LabelOutputType.raw.value:
-            with open(save_dir/"annotations.txt", "a") as f:
+            with open(save_dir / "annotations.txt", "a") as f:
                 for annotation in annotations:
                     f.write(annotation.to_row() + "\n")
         elif output_type == LabelOutputType.shapely.value:
@@ -241,9 +250,7 @@ def download_labels(
             row_iterator = _row_iterator(annotations)
 
             for idx, curr_annotation in enumerate(annotation_parser.from_iterable(row_iterator)):
-                # TODO: Ajey, for you to debug ;-)
-                save_shapely(curr_annotation, study_id="638", filter_type=["brush", "polygon"])
-            annotation_parser.check()
+                save_shapely(curr_annotation, save_dir=save_dir, filter_type=ann_type)
         else:
             raise RuntimeError(f"Output type not supported.")
 
@@ -268,17 +275,11 @@ def _download_labels(args: argparse.Namespace) -> None:
         args.study_id,
         args.output_dir,
         output_type=args.output_type,
+        ann_type=args.ann_type,
         question=args.question,
         email=args.user,
         disable_certificate_check=args.disable_certificate_check,
     )
-
-
-#
-# def _write_shapely_to_disc(args: argparse.Namespace) -> None:
-#     write_shapely_to_disc(
-#         args.ann_file, str(args.study_id), args.ann_user, args.ann_label, args.ann_type
-#     )
 
 
 def append_to_manifest(save_dir: pathlib.Path, image_id: int, filename: pathlib.Path) -> None:
@@ -395,9 +396,13 @@ def register_parser(parser: argparse._SubParsersAction):
     download_label_parser.add_argument(
         "-o" "--output-type",
         dest="output_type",
-        help="Type of output (AJEY IMPROVE THIS)",
+        help="Type of output",
         choices=LabelOutputType.__members__,
         default=LabelOutputType.shapely,
+    )
+
+    download_label_parser.add_argument(
+        "ann_type", nargs="*", type=str, help="list of required type of annotations", default=["brush", "polygon"]
     )
     download_label_parser.add_argument(
         "output_dir",

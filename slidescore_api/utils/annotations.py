@@ -58,7 +58,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     _check_type_error(filter_type)
     save_path = save_dir / Path("annotations" + "/" + annotations.author + "/" + annotations.slide_name)
     save_path.mkdir(parents=True, exist_ok=True)
-    with open(save_path / (annotations.label + ".json"), "w") as file:
+    with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         for polygon_id, _ in enumerate(annotations.annotation):
             # TODO: Handle for different kinds of Annotation Types
             if annotations.annotation[polygon_id]["type"] == AnnotationType.POLYGON.value:

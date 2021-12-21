@@ -344,7 +344,7 @@ class APIClient:
             raise SlideScoreErrorException(rjson["log"])
         return True
 
-    def upload_asap( # pylint: disable=R0913
+    def upload_asap(  # pylint: disable=R0913
         self,
         image_id: int,
         user: str,

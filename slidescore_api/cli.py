@@ -28,6 +28,7 @@ class LabelOutputType(Enum):
     raw: str = "raw"
     shapely: str = "shapely"
 
+
 def parse_api_token(data: Optional[Path] = None) -> str:
     """
     Parse the API token from file or from the SLIDESCORE_API_KEY. If file is given, this will overwrite the

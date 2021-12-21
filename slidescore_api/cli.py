@@ -239,13 +239,13 @@ def download_labels(
         image_id = image["id"]
         annotations = client.get_results(study_id, imageid=image_id, **extra_kwargs)
 
-        if output_type == LabelOutputType.json.value:
+        if LabelOutputType[output_type] == LabelOutputType.json:
             _save_label_as_json(save_dir, image_id, image, annotations)
-        elif output_type == LabelOutputType.raw.value:
+        elif LabelOutputType[output_type] == LabelOutputType.raw:
             with open(save_dir / "annotations.txt", "a") as f:
                 for annotation in annotations:
                     f.write(annotation.to_row() + "\n")
-        elif output_type == LabelOutputType.shapely.value:
+        elif LabelOutputType[output_type] == LabelOutputType.shapely:
             annotation_parser = SlideScoreAnnotations()
             row_iterator = _row_iterator(annotations)
 
@@ -397,6 +397,7 @@ def register_parser(parser: argparse._SubParsersAction):
         "-o" "--output-type",
         dest="output_type",
         help="Type of output",
+        type=str,
         choices=LabelOutputType.__members__,
         default=LabelOutputType.shapely,
     )

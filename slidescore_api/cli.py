@@ -233,7 +233,7 @@ def download_labels(
         if output_type == LabelOutputType.json.value:
             _save_label_as_json(save_dir, image_id, image, annotations)
         elif output_type == LabelOutputType.raw.value:
-            with open("annotations.txt", "a") as f:
+            with open(save_dir/"annotations.txt", "a") as f:
                 for annotation in annotations:
                     f.write(annotation.to_row() + "\n")
         elif output_type == LabelOutputType.shapely.value:

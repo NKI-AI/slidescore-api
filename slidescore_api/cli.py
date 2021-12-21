@@ -28,15 +28,6 @@ class LabelOutputType(Enum):
     raw: str = "raw"
     shapely: str = "shapely"
 
-
-class AnnotationType(Enum):
-    polygon: str = "polygon"
-    rect: str = "rect"
-    ellipse: str = "ellipse"
-    brush: str = "brush"
-    heatmap: str = "heatmap"
-
-
 def parse_api_token(data: Optional[Path] = None) -> str:
     """
     Parse the API token from file or from the SLIDESCORE_API_KEY. If file is given, this will overwrite the

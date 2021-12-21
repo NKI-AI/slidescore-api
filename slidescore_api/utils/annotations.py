@@ -59,7 +59,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     save_path = save_dir / Path("annotations" + "/" + annotations.author + "/" + annotations.slide_name)
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w") as file:
-        for polygon_id in range(len(annotations.annotation)):
+        for polygon_id, _ in enumerate(annotations.annotation):
             # TODO: Handle for different kinds of Annotation Types
             if annotations.annotation[polygon_id]["type"] == AnnotationType.POLYGON.value:
                 _save_polygon_as_shapely(annotations, polygon_id, file)
@@ -108,7 +108,7 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:
         warnings.warn(
             f"Not all negative_polygons accounted for: {inners_count} / {len(negative_polygons)}.\n"
             f"Indices :{[nidx for nidx, val in used_negatives.items() if not val]}.\n"
-            f"Polygons:{[([pt for pt in negative_polygons[idx].exterior.coords]) for nidx, val in used_negatives.items() if not val]}.\n"
+            f"Polygons:{[list(negative_polygons[idx].exterior.coords) for idx, val in used_negatives.items() if not val]}.\n"
             f"Areas   :{[negative_polygons[nidx].area for nidx, val in used_negatives.items() if not val]}.\n"
         )
 
@@ -214,7 +214,7 @@ class SlideScoreAnnotations:
                 yield line
 
     def _parse_annotation_row(self, row, filter_empty):
-        _row = {k: v for k, v in zip(self._headers, row.split("\t"))}
+        _row = dict(zip(self._headers, row.split("\t")))
         data = {}
         try:
             ann = json.loads(_row["Answer"])

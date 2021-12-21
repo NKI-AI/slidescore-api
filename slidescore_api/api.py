@@ -70,9 +70,7 @@ class SlideScoreResult:
         self.user = slide_dict["user"]
         self.tma_row = int(slide_dict["tmaRow"]) if "tmaRow" in slide_dict else None
         self.tma_col = int(slide_dict["tmaCol"]) if "tmaCol" in slide_dict else None
-        self.tma_sample_id = (
-            slide_dict["tmaSampleID"] if "tmaSampleID" in slide_dict else ""
-        )
+        self.tma_sample_id = slide_dict["tmaSampleID"] if "tmaSampleID" in slide_dict else ""
         self.question = slide_dict["question"]
         self.answer = slide_dict["answer"]
 
@@ -90,15 +88,7 @@ class SlideScoreResult:
             return ""
         ret = str(self.image_id) + "\t" + self.image_name + "\t" + self.user + "\t"
         if self.tma_row is not None:
-            ret = (
-                ret
-                + str(self.tma_row)
-                + "\t"
-                + str(self.tma_col)
-                + "\t"
-                + self.tma_sample_id
-                + "\t"
-            )
+            ret = ret + str(self.tma_row) + "\t" + str(self.tma_col) + "\t" + self.tma_sample_id + "\t"
         ret = ret + self.question + "\t" + self.answer
         return ret
 
@@ -118,9 +108,7 @@ class SlideScoreResult:
 class APIClient:
     """SlideScore API client."""
 
-    def __init__(
-        self, server: str, api_token: str, disable_cert_checking: bool = False
-    ) -> None:
+    def __init__(self, server: str, api_token: str, disable_cert_checking: bool = False) -> None:
         """
         Base client class for interfacing with slidescore servers.
         Needs and slidescore_url (example: "https://rhpc.nki.nl/slidescore/"), and a api token. Note the ending "/".
@@ -169,9 +157,7 @@ class APIClient:
         Response
         """
         if method not in ["POST", "GET"]:
-            raise SlideScoreErrorException(
-                f"Expected method to be either `POST` or `GET`. Got {method}."
-            )
+            raise SlideScoreErrorException(f"Expected method to be either `POST` or `GET`. Got {method}.")
 
         headers = {
             "Accept": "application/json",
@@ -180,9 +166,7 @@ class APIClient:
         url = urllib.parse.urljoin(self.end_point, request)
 
         if method == "POST":
-            response = requests.post(
-                url, verify=self.verify_certificate, headers=headers, data=data
-            )
+            response = requests.post(url, verify=self.verify_certificate, headers=headers, data=data)
         else:
             response = requests.get(
                 url,
@@ -212,9 +196,7 @@ class APIClient:
         # TODO: Convert to NamedTuple
         response = self.perform_request("Images", {"studyid": study_id})
         rjson = response.json()
-        self.logger.info(
-            f"found {len(rjson)} slides with SlideScore API for study ID {study_id}."
-        )
+        self.logger.info(f"found {len(rjson)} slides with SlideScore API for study ID {study_id}.")
 
         return rjson
 
@@ -255,16 +237,12 @@ class APIClient:
 
         raw = response.headers["Content-Disposition"]
         filename = self._get_filename(raw)
-        self.logger.info(
-            f"Writing to {save_dir / filename} (reporting file size of {filesize})..."
-        )
+        self.logger.info(f"Writing to {save_dir / filename} (reporting file size of {filesize})...")
         write_to = save_dir / filename
         history = self._read_from_history(save_dir)
 
         if skip_if_exists and str(filename) in history:
-            self.logger.info(
-                f"File {save_dir / filename} already downloaded. Skipping."
-            )
+            self.logger.info(f"File {save_dir / filename} already downloaded. Skipping.")
             response.close()
             return write_to
 
@@ -304,9 +282,7 @@ class APIClient:
         """
         optional_keys = ["question", "email", "imageid", "caseid"]
         if any(_ not in optional_keys for _ in kwargs):
-            raise RuntimeError(
-                f"Expected optional keys to be any of {', '.join(optional_keys)}. Got {kwargs.keys()}."
-            )
+            raise RuntimeError(f"Expected optional keys to be any of {', '.join(optional_keys)}. Got {kwargs.keys()}.")
 
         response = self.perform_request("Scores", {"studyid": study_id, **kwargs})
         rjson = response.json()
@@ -330,9 +306,7 @@ class APIClient:
         rjson = response.json()
 
         if not rjson["success"]:
-            raise SlideScoreErrorException(
-                f"Configuration for study id {study_id} not returned succesfully"
-            )
+            raise SlideScoreErrorException(f"Configuration for study id {study_id} not returned succesfully")
 
         return rjson["config"]
 
@@ -357,9 +331,7 @@ class APIClient:
         """
         results_as_row = [r.to_row() for r in results]
         sres = "\n" + "\n".join(results_as_row)
-        response = self.perform_request(
-            "UploadResults", {"studyid": study_id, "results": sres}
-        )
+        response = self.perform_request("UploadResults", {"studyid": study_id, "results": sres})
         rjson = response.json()
         if not rjson["success"]:
             raise SlideScoreErrorException(rjson["log"])
@@ -378,9 +350,7 @@ class APIClient:
             "UploadASAPAnnotations",
             {
                 "imageid": image_id,
-                "questionsMap": "\n".join(
-                    key + ";" + val for key, val in questions_map.items()
-                ),
+                "questionsMap": "\n".join(key + ";" + val for key, val in questions_map.items()),
                 "user": user,
                 "annotationName": annotation_name,
                 "asapAnnotation": asap_annotation,
@@ -405,9 +375,7 @@ class APIClient:
         dict
             Image metadata as stored in SlideScore.
         """
-        response = self.perform_request(
-            "GetImageMetadata", {"imageId": image_id}, "GET"
-        )
+        response = self.perform_request("GetImageMetadata", {"imageId": image_id}, "GET")
         rjson = response.json()
         if not rjson["success"]:
             raise SlideScoreErrorException(rjson["log"])
@@ -444,9 +412,7 @@ class APIClient:
         if self.base_url is None:
             raise RuntimeError
 
-        response = self.perform_request(
-            f"GetTileServer?imageId={str(image_id)}", None, method="GET"
-        )
+        response = self.perform_request(f"GetTileServer?imageId={str(image_id)}", None, method="GET")
         rjson: Dict = dict(response.json())
         url_parts = "/".join(["i", str(image_id), rjson["urlPart"], "_files"])
         return (
@@ -493,9 +459,7 @@ class APIClient:
         )
         if response.status_code == 200:
             return Image.open(io.BytesIO(response.content))
-        raise SlideScoreErrorException(
-            f"Expected response code 200. Got {response.status_code}."
-        )
+        raise SlideScoreErrorException(f"Expected response code 200. Got {response.status_code}.")
 
     @staticmethod
     def _get_filename(s: str) -> str:
@@ -538,9 +502,7 @@ class SlideScoreErrorException(Exception):
     pass
 
 
-def build_client(
-    slidescore_url: str, api_token: str, disable_certificate_check: bool = False
-) -> APIClient:
+def build_client(slidescore_url: str, api_token: str, disable_certificate_check: bool = False) -> APIClient:
     """
     Build a SlideScore API Client.
 
@@ -559,9 +521,7 @@ def build_client(
         A SlideScore API client.
     """
     try:
-        client = APIClient(
-            slidescore_url, api_token, disable_cert_checking=disable_certificate_check
-        )
+        client = APIClient(slidescore_url, api_token, disable_cert_checking=disable_certificate_check)
     except requests.exceptions.SSLError as e:
         sys.exit(
             f"SSLError, possibly because the SSL certificate cannot be read. "

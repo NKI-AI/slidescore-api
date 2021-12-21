@@ -1,5 +1,6 @@
 # coding=utf-8
-# Copyright (c) slidescore_api contributors
+# Copyright (c) SlideScore API contributors
+"""Central logging module of slidescore-api"""
 import datetime
 import logging
 import os

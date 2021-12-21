@@ -43,7 +43,7 @@ def parse_api_token(data: Optional[Path] = None) -> str:
     """
     if data is not None and pathlib.Path(data).is_file():
         # load token
-        with open(data, "r") as file:
+        with open(data, "r", encoding="utf-8") as file:
             api_token = file.read().strip()
     else:
         api_token = os.environ.get("SLIDESCORE_API_KEY", "")
@@ -81,7 +81,7 @@ def _upload_labels(args: argparse.Namespace) -> None:
     except OverflowError:
         csv.field_size_limit(int(sys.maxsize / 10))
 
-    with open(args.results_file, "r") as csvfile:
+    with open(args.results_file, "r", encoding="utf-8") as csvfile:
         reader = csv.DictReader(csvfile, delimiter=args.csv_delimiter, fieldnames=args.csv_fieldnames)
         for row in reader:
             image_id = row["imageID"]
@@ -166,7 +166,7 @@ def _save_label_as_json(save_dir, image_id, image, annotations):
         annotation_data["annotations"].append({"user": annotation.user, "question": annotation.question, "data": data})
 
     # Now save this to JSON.
-    with open(save_dir / f"{image_id}.json", "w") as file:
+    with open(save_dir / f"{image_id}.json", "w", encoding="utf-8") as file:
         json.dump(annotation_data, file, indent=2)
 
 

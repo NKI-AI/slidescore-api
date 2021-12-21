@@ -16,7 +16,7 @@ from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
 class ImageAnnotation(NamedTuple):
     slide_name: str
     author: str
-    label: str
+    LABEL: str
     annotation: Union[
         Dict[int, Union[dict, Any]],
         Dict[int, Union[Union[Dict[str, Union[str, Any]], dict], Any]],
@@ -303,17 +303,3 @@ class SlideScoreAnnotations:
             self.annotations_generated += 1
 
             yield row_annotation
-
-
-if __name__ == "__main__":
-    path = Path("/Users/jteuwen/Downloads/TISSUE_COMPARTMENTS_21_12_20_48.txt")
-    reader = SlideScoreAnnotations()
-    author = "a.karkala@nki.nl"
-    label = "specimen"
-    ann_type = ["brush", "polygon"]
-
-    row_iterator = reader.annotation_file_iterator(path)
-
-    for idx, curr_annotation in enumerate(reader.from_iterable(row_iterator)):
-        print(curr_annotation)
-        save_shapely(curr_annotation, save_dir=Path("test"), filter_type=ann_type)

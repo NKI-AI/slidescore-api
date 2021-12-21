@@ -52,11 +52,11 @@ def setup_logging(
 
     if filename:
         filename.parent.mkdir(parents=True, exist_ok=True)
-        fh = logging.FileHandler(filename)
-        fh.setLevel(log_level)
+        filehandler = logging.FileHandler(filename)
+        filehandler.setLevel(log_level)
         formatter = logging.Formatter(formatter_str)
-        fh.setFormatter(formatter)
-        root.addHandler(fh)
+        filehandler.setFormatter(formatter)
+        root.addHandler(filehandler)
 
 
 def build_cli_logger(

@@ -44,6 +44,7 @@ type_to_name = [
 class SlideScoreResult:
     """Slidescore wrapper class for storing SlideScore server responses."""
 
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, slide_dict: Dict = None):
         """
         Parameters
@@ -83,6 +84,14 @@ class SlideScoreResult:
                     self.points = annos
 
     def to_row(self) -> str:
+        """
+        Convert dictionary output to a tab-separated string
+
+        Returns
+        -------
+        str
+            Tab separated string
+        """
         if self.__slide_dict is None:
             return ""
         ret = str(self.image_id) + "\t" + self.image_name + "\t" + self.user + "\t"
@@ -192,7 +201,6 @@ class APIClient:
         dict
             Dictionary containing the images in the study.
         """
-        # TODO: Convert to NamedTuple
         response = self.perform_request("Images", {"studyid": study_id})
         rjson = response.json()
         self.logger.info("Found %s slides with SlideScore API for study ID %s.", len(rjson), study_id)
@@ -336,7 +344,7 @@ class APIClient:
             raise SlideScoreErrorException(rjson["log"])
         return True
 
-    def upload_asap(
+    def upload_asap( # pylint: disable=R0913
         self,
         image_id: int,
         user: str,

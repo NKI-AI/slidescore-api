@@ -78,8 +78,11 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         for polygon_id, _ in enumerate(annotations.annotation):
-            # TODO: Handle for different kinds of Annotation Types
-            if annotations.annotation[polygon_id]["type"] == AnnotationType.POLYGON:
+            # Handles only polygon and brush type annotations.
+            if (
+                annotations.annotation[polygon_id]["type"] == AnnotationType.POLYGON
+                or annotations.annotation[polygon_id]["type"] == AnnotationType.BRUSH
+            ):
                 _save_polygon_as_shapely(annotations, polygon_id, file)
 
 
@@ -106,8 +109,6 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:
         for k, polygon in enumerate(negative_polygons)
     }
 
-    # Check if any negative polygon is contained in a positive polygon
-    # TODO: Should strike out inners already taken to make it efficient
     used_negatives = {idx: False for idx in negative_polygons}
     inners_count = 0
     polygons = []
@@ -265,7 +266,7 @@ class SlideScoreAnnotations:
             for line in annotation_file:
                 yield line
 
-    def _parse_annotation_row(self, row, filter_empty):
+    def _parse_annotation_row(self, row, filter_empty):  # pylint:disable=too-many-branches
         _row = dict(zip(self._headers, row.split("\t")))
         data = {}
         try:

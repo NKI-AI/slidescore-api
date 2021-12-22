@@ -41,7 +41,8 @@ type_to_name = [
 ]
 
 
-class SlideScoreResult:  # pylint: ignore=too-many-instance-attributes
+class SlideScoreResult:
+    # pylint: disable=too-many-instance-attributes
     """Slidescore wrapper class for storing SlideScore server responses."""
 
     def __init__(self, slide_dict: Dict = None):
@@ -51,6 +52,7 @@ class SlideScoreResult:  # pylint: ignore=too-many-instance-attributes
         slide_dict : dict
             SlideScore server response for annotations/labels.
         """
+
         self.__slide_dict = slide_dict
         if not slide_dict:
             slide_dict = {
@@ -137,8 +139,6 @@ class APIClient:
         self.verify_certificate = not disable_cert_checking
         self.base_url: Union[str, None] = None
         self.cookie: Union[str, None] = None
-
-        # TODO: Implement using from requests.auth import HTTPBasicAuth, with wrapper to requests.
 
     def perform_request(
         self,
@@ -231,7 +231,6 @@ class APIClient:
             Filename the output has been written to.
 
         """
-        # TODO: Allow to disable verbosity.
         image_id = image["id"]
         filesize = image["fileSize"]
         response = self.perform_request(

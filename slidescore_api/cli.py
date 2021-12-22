@@ -4,13 +4,6 @@
 
 This module contains the CLI utilities that can be used with slidescore in python.
 
-Examples
--------
-
-
-Notes
------
-
 """
 import argparse
 import csv
@@ -31,7 +24,6 @@ from slidescore_api.utils.annotations import SlideScoreAnnotations, save_shapely
 
 logger = logging.getLogger(__name__)
 
-# TODO: This are the names of the shapes.
 ANNOSHAPE_TYPES = ["polygon", "rect", "ellipse", "brush", "heatmap"]
 
 
@@ -122,7 +114,6 @@ def _upload_labels(args: argparse.Namespace) -> None:
     client.upload_results(study_id, wsi_results)
 
 
-# TODO: This is how to actually retrieve the questions. Think about a proper way to do this.
 def retrieve_questions(
     slidescore_url: str,
     api_token: str,
@@ -171,7 +162,7 @@ def retrieve_questions(
 def _save_label_as_json(save_dir, image_id, image, annotations):
     annotation_data = {
         "image_id": image_id,
-        "study_id": image["studyID"],  # TODO: image must become a class / NamedTuple
+        "study_id": image["studyID"],
         "image_name": image["name"],
         "annotations": [],
     }
@@ -193,7 +184,7 @@ def _row_iterator(slidescore_annotations: Iterable[SlideScoreResult]):
         yield annotation.to_row()
 
 
-def download_labels(  # pylint: disable=too-many-arguments,too-many-locals
+def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
     slidescore_url: str,
     api_token: str,
     study_id: int,
@@ -204,7 +195,6 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals
     question: Optional[str] = None,
     disable_certificate_check: bool = False,
 ) -> None:
-    # TODO: Add format to docstring
     """
     Downloads all available annotations for a study on SlideScore from
     one specific author and saves them in a JSON file per image.
@@ -241,7 +231,6 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals
     if question is not None:
         extra_kwargs["question"] = question
 
-    # TODO: Images should become a class / NamedTuple
     images = client.get_images(study_id)
 
     for image in tqdm(images):
@@ -372,7 +361,8 @@ def _download_wsi(args: argparse.Namespace):
     )
 
 
-def register_parser(parser: argparse._SubParsersAction):  # pylint: ignore=protected-access
+def register_parser(parser: argparse._SubParsersAction):
+    # pylint: disable=protected-access
     """Register slidescore commands to a root parser."""
     # Download slides to a subfolder
     download_wsi_parser = parser.add_parser("download-wsis", help="Download WSIs from SlideScore.")

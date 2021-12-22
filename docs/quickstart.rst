@@ -30,16 +30,18 @@ If the :doc:`/installation` went smoothly, you should be able to run :bash:`slid
         -v, --verbose         Verbosity level, e.g. -v, -vv, -vvv (default: 0)
   
   
-First things first:
-
+First things first
+---------------------
 In order to use the slidescore API, you need to get an API key approved for a particular study/studies. You may reach out to Jan Hudecek (j.hudecek@nki.nl) and get this done. Once you have the API key, store it securely. **This is important because the API key can allow users to access proprietary data of the NKI and you do not want it in the wrong hands!**.
 
-It is a good practice to export the API key to your working environment only when you plan to use the slidescore API. To do this, simply type in the following in your terminal - :bash:`export SLIDESCORE_API_KEY="your API key goes here"`. You can also set the :bash:`-t` flag as the path to your API token while using the command line interface (CLI).
+It is a good practice to export the API key to your working environment only when you plan to use the slidescore API. While using the slidescore-api in your python programs, set an environment variable - :bash:`export SLIDESCORE_API_KEY="your API key goes here"`. You can do this before using the command line interface (CLI) or you can also set the :bash:`-t` flag as the path to your API token before using the CLI.
 
 Note: You get access to only those slidescore studies which are assigned to you through the unique API key.
 
 Now we are ready to use the API. Let us go through each functionality of the API.
 
+Command Line Interface
+------------------------
 1. **Download whole slide images of a slidescore study**
 
 You can download all the whole slide images (WSIs) corresponding to a particular study from slidescore through the CLI. For clarity, you can easily check the help for this subcommand by typing :bash:`slidescore download-wsis -h`

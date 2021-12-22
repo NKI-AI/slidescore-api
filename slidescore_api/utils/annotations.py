@@ -208,7 +208,7 @@ class SlideScoreAnnotations:
     def annotation_file_iterator(self, filename: os.PathLike):
         filename = Path(filename)
 
-        with open(filename, "r") as annotation_file:
+        with open(filename, "r", encoding="utf-8") as annotation_file:
             if self._headers != annotation_file.readline().strip().split("\t"):
                 raise RuntimeError("Header missing.")
             for line in annotation_file:

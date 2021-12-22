@@ -176,7 +176,7 @@ def _row_iterator(slidescore_annotations: Iterable[SlideScoreResult]):
         yield annotation.to_row()
 
 
-def download_labels(
+def download_labels(  # pylint: disable=too-many-arguments,too-many-locals
     slidescore_url: str,
     api_token: str,
     study_id: int,
@@ -241,10 +241,10 @@ def download_labels(
             annotation_parser = SlideScoreAnnotations()
             row_iterator = _row_iterator(annotations)
 
-            for idx, curr_annotation in enumerate(annotation_parser.from_iterable(row_iterator)):
+            for curr_annotation in annotation_parser.from_iterable(row_iterator):
                 save_shapely(curr_annotation, save_dir=save_dir, filter_type=ann_type)
         else:
-            raise RuntimeError(f"Output type not supported.")
+            raise RuntimeError(f"Output type {output_type} not supported.")
 
 
 def _download_labels(args: argparse.Namespace) -> None:
@@ -288,7 +288,7 @@ def append_to_manifest(save_dir: pathlib.Path, image_id: int, filename: pathlib.
     -------
     None
     """
-    with open(save_dir / "slidescore_mapping.txt", "a") as file:
+    with open(save_dir / "slidescore_mapping.txt", "a", encoding="utf-8") as file:
         file.write(f"{image_id} {filename.name}\n")
 
 
@@ -314,7 +314,7 @@ def download_wsis(
     -------
     None
     """
-    logger.info(f"Will write to: {save_dir}")
+    logger.info("Will write to: %s", save_dir)
     # Set up client and directories
     client = build_client(slidescore_url, api_token, disable_certificate_check)
     save_dir.mkdir(exist_ok=True)
@@ -326,9 +326,9 @@ def download_wsis(
     for image in tqdm(images):
         image_id = image["id"]
 
-        logger.info(f"Downloading image for id: {image_id}")
+        logger.info("Downloading image for id: %s", image_id)
         filename = client.download_slide(study_id, image, save_dir=save_dir)
-        logger.info(f"Image with id {image_id} has been saved to {filename}.")
+        logger.info("Image with id %s has been saved to %s.", image_id, filename)
         append_to_manifest(save_dir, image_id, filename)
 
 
@@ -355,7 +355,7 @@ def _download_wsi(args: argparse.Namespace):
     )
 
 
-def register_parser(parser: argparse._SubParsersAction):
+def register_parser(parser: argparse._SubParsersAction):  # pylint: ignore=protected-access
     """Register slidescore commands to a root parser."""
     # Download slides to a subfolder
     download_wsi_parser = parser.add_parser("download-wsis", help="Download WSIs from SlideScore.")

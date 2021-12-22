@@ -41,10 +41,9 @@ type_to_name = [
 ]
 
 
-class SlideScoreResult:
+class SlideScoreResult:  # pylint: ignore=too-many-instance-attributes
     """Slidescore wrapper class for storing SlideScore server responses."""
 
-    # pylint: disable=too-many-instance-attributes
     def __init__(self, slide_dict: Dict = None):
         """
         Parameters

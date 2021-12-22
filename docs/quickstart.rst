@@ -34,7 +34,7 @@ First things first
 ---------------------
 In order to use the slidescore API, you need to get an API key approved for a particular study/studies. You may reach out to Jan Hudecek (j.hudecek@nki.nl) and get this done. Once you have the API key, store it securely. **This is important because the API key can allow users to access proprietary data of the NKI and you do not want it in the wrong hands!**
 
-It is a good practice to export the API key to your working environment only when you plan to use the slidescore API. While using the slidescore-api in your python programs, set an environment variable - :bash:`export SLIDESCORE_API_KEY="your API key goes here"`. While using the command line interface (CLI), the environment variable can be set in a similar manner or simply set the :bash:`-t` flag as the path to your API token while using the CLI.
+It is a good practice to export the API key to your working environment only when you plan to use the slidescore API. While using the slidescore-api in your python programs, set an environment variable - :bash:`export SLIDESCORE_API_KEY="your API key goes here"`. While using the command line interface (CLI), the environment variable can be set in a similar manner or simply set the :bash:`-t` flag as the path to your API token.
 
 Note: You get access to only those slidescore studies which are assigned to you through the unique API key.
 

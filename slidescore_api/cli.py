@@ -147,18 +147,6 @@ def retrieve_questions(
     return scores
 
 
-#
-# def write_shapely_to_disc(
-#     annotation_file_path: Path, study_id: str, author: str, label: str, ann_type: list
-# ) -> None:
-#     reader = SlideScoreAnnotations(Path(annotation_file_path))
-#     for idx, curr_annotation in enumerate(
-#         reader.from_iterable(filter_author=author, filter_label=label)
-#     ):
-#         save_shapely(curr_annotation, study_id=study_id, filter_type=ann_type)
-#     reader.check()
-
-
 def _save_label_as_json(save_dir, image_id, image, annotations):
     annotation_data = {
         "image_id": image_id,

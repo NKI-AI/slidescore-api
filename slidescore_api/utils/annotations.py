@@ -1,6 +1,6 @@
 #!/home/ajey/miniconda3/bin/python3
 # coding=utf-8
-# TODO: Parse function must be able to return None, and check before adding
+"""Utilility file containing parsing modules and functions to save slidescore annotations."""
 
 import json
 import os
@@ -14,6 +14,12 @@ from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
 
 
 class ImageAnnotation(NamedTuple):
+    """
+    NamedTuple class for Image Annotations.
+
+    This class can be instantiated to contain different attributes of a WSI along with its annotations.
+    """
+
     slide_name: str
     author: str
     label: str
@@ -48,12 +54,21 @@ def _save_polygon_as_shapely(annotations, polygon_id, file):
 
 def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list) -> None:
     """
+    Given a single Annotation of a WSI, this function writes them as shapely objects to disc
     Parameters
     ----------
-    annotations
-    save_dir
-    filter_type
+    annotations: ImageAnnotation
+        A named Tuple containing Image annotations
 
+    save_dir: Path
+        A Path object pointing to the directory where the shapely objects need to be written.
+
+    filter_type: list
+        List of annotation types that is to be written to disc. members must be enumerated in AnnotationType
+
+    Returns
+    ----------
+    None
     """
     _check_type_error(filter_type)
     save_path = save_dir / Path("annotations" + "/" + annotations.author + "/" + annotations.slide_name)
@@ -61,7 +76,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         for polygon_id, _ in enumerate(annotations.annotation):
             # TODO: Handle for different kinds of Annotation Types
-            if annotations.annotation[polygon_id]["type"] == AnnotationType.POLYGON.value:
+            if annotations.annotation[polygon_id]["type"] == AnnotationType.POLYGON:
                 _save_polygon_as_shapely(annotations, polygon_id, file)
 
 

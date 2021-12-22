@@ -4,7 +4,6 @@
 """The setup script."""
 
 import ast
-from typing import List
 
 from setuptools import find_packages, setup  # type: ignore
 

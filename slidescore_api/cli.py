@@ -1,5 +1,17 @@
 # coding=utf-8
 # Copyright (c) Jonas Teuwen
+"""The slidescore-CLI module.
+
+This module contains the CLI utilities that can be used with slidescore in python.
+
+Examples
+-------
+
+
+Notes
+-----
+
+"""
 import argparse
 import csv
 import json
@@ -24,6 +36,10 @@ ANNOSHAPE_TYPES = ["polygon", "rect", "ellipse", "brush", "heatmap"]
 
 
 class LabelOutputType(Enum):
+    """
+    Enumerated Class for label output casting.
+    """
+
     JSON: str = "json"
     RAW: str = "raw"
     SHAPELY: str = "shapely"
@@ -37,6 +53,7 @@ def parse_api_token(data: Optional[Path] = None) -> str:
     Parameters
     ----------
     data : str or pathlib.Path
+
     Returns
     -------
     str

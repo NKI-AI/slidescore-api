@@ -3,7 +3,6 @@
 """Utilility file containing parsing modules and functions to save slidescore annotations."""
 
 import json
-import os
 import warnings
 from enum import Enum
 from pathlib import Path
@@ -30,6 +29,10 @@ class ImageAnnotation(NamedTuple):
 
 
 class AnnotationType(Enum):
+    """
+    Enumerated class for type of slidescore annotations
+    """
+
     POLYGON: str = "polygon"
     RECT: str = "rect"
     ELLIPSE: str = "ellipse"
@@ -205,6 +208,10 @@ def _parse_points_annotation(annotations: Dict) -> Dict:
 
 
 class SlideScoreAnnotations:
+    """
+    Main class for Slidescore annotation parsing.
+    """
+
     _headers = ["ImageID", "Image Name", "By", "Question", "Answer"]
     _parse_fns = {
         "brush": _parse_brush_annotation,
@@ -220,9 +227,38 @@ class SlideScoreAnnotations:
         self.num_empty = 0
         self.num_entries = 0
 
-    def annotation_file_iterator(self, filename: os.PathLike):
-        filename = Path(filename)
+    def check(self) -> None:
+        """
+        Performs Sanity checking while reading annotations from manually downloaded annotations.
 
+        Returns
+        -------
+        None
+        """
+        # Make sure we accounted for everything
+        if self.num_entries != self.annotations_generated + self.unannotated + self.num_empty:
+            raise RuntimeError(
+                f"Some rows were missed. \nParsed: {self.annotations_generated + self.num_empty}, "
+                f"Read: {self.num_entries} "
+            )
+        print("Total annotated images: ", self.annotations_generated)
+        print("Total unannotated images: ", self.unannotated)
+        print("Total empty entries: ", self.num_empty)
+
+    def annotation_file_iterator(self, filename: Path) -> Iterable:
+        """
+        Generator function to yield a single line from a manually downloaded slidescore annotation file.
+
+        Parameters
+        ----------
+        filename: Path
+            The path to the slidescore annotation file.
+
+        Returns
+        -------
+        line: Iterable
+            One line from the annotation file.
+        """
         with open(filename, "r", encoding="utf-8") as annotation_file:
             if self._headers != annotation_file.readline().strip().split("\t"):
                 raise RuntimeError("Header missing.")

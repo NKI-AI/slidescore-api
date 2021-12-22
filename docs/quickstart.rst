@@ -32,13 +32,27 @@ If the :doc:`/installation` went smoothly, you should be able to run :bash:`slid
   
 First things first:
 
-1. In order to use the slidescore API, you need to get an API key approved for a particular study. You may reach out to Jan Hudecek (j.hudecek@nki.nl) and get this done. Once you have the API key, store it securely. **This is important because the API key can allow users to access proprietary data of the NKI and you do not want that!**.
+1. In order to use the slidescore API, you need to get an API key approved for a particular study/studies. You may reach out to Jan Hudecek (j.hudecek@nki.nl) and get this done. Once you have the API key, store it securely. **This is important because the API key can allow users to access proprietary data of the NKI and you do not want it in the wrong hands!**.
 
-2. It is a good practice to export the API key to your working environment only when you plan to use the slidescore API. To do this, simply type in the following in your terminal - :code:`export SLIDESCORE_API_KEY="your API key goes here"`.
+2. It is a good practice to export the API key to your working environment only when you plan to use the slidescore API. To do this, simply type in the following in your terminal - :bash:`export SLIDESCORE_API_KEY="your API key goes here"`.
 
-3. You can also set the -t flag as the path to your API token while using the command line interface.
+3. You can also set the :bash:`-t` flag as the path to your API token while using the command line interface (CLI).
 
 Note: You get access to only those slidescore studies which are assigned to you through the unique API key.
 
-Now we are ready to use the API.
-  
+Now we are ready to use the API. Let us go through each functionality of the API.
+
+1. **Download whole slide images from a study**
+You can download all the whole slide images (WSIs) corresponding to a particular study from slidescore through the CLI. For clarity, you can easily check the help for this subcommand by typing :bash:`slidescore download-wsis -h`.
+
+.. code-block:: console
+
+   usage: slidescore download-wsis [-h] output_dir
+
+   positional arguments:
+     output_dir  Directory to save output too.
+
+   optional arguments:
+     -h, --help  show this help message and exit
+
+If you have access to a slidescore study with id = *xyz* then you can download all the WSIs to a local folder *output_dir* on your computer with :bash:`slidescore -s xyz download-wsis output_dir`.

@@ -7,15 +7,6 @@ If the :doc:`/installation` went smoothly, you should be able to run :bash:`slid
 
 .. code-block:: console
 
-    .. role:: bash(code)
-   :language: bash
-
-Quick Start
-===========
-If the :doc:`/installation` went smoothly, you should be able to run :bash:`slidescore --help` and see:
-
-.. code-block:: console
-
    usage: slidescore [-h] [--slidescore-url SLIDESCORE_URL] -t TOKEN_PATH -s STUDY_ID [--disable-certificate-check] [--no-log] [-v] {download-wsis,download-labels,upload-labels}           ...
 
       positional arguments:

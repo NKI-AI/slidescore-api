@@ -32,18 +32,17 @@ If the :doc:`/installation` went smoothly, you should be able to run :bash:`slid
   
 First things first:
 
-1. In order to use the slidescore API, you need to get an API key approved for a particular study/studies. You may reach out to Jan Hudecek (j.hudecek@nki.nl) and get this done. Once you have the API key, store it securely. **This is important because the API key can allow users to access proprietary data of the NKI and you do not want it in the wrong hands!**.
+In order to use the slidescore API, you need to get an API key approved for a particular study/studies. You may reach out to Jan Hudecek (j.hudecek@nki.nl) and get this done. Once you have the API key, store it securely. **This is important because the API key can allow users to access proprietary data of the NKI and you do not want it in the wrong hands!**.
 
-2. It is a good practice to export the API key to your working environment only when you plan to use the slidescore API. To do this, simply type in the following in your terminal - :bash:`export SLIDESCORE_API_KEY="your API key goes here"`.
-
-3. You can also set the :bash:`-t` flag as the path to your API token while using the command line interface (CLI).
+It is a good practice to export the API key to your working environment only when you plan to use the slidescore API. To do this, simply type in the following in your terminal - :bash:`export SLIDESCORE_API_KEY="your API key goes here"`. You can also set the :bash:`-t` flag as the path to your API token while using the command line interface (CLI).
 
 Note: You get access to only those slidescore studies which are assigned to you through the unique API key.
 
 Now we are ready to use the API. Let us go through each functionality of the API.
 
-1. **Download whole slide images from a study**
-You can download all the whole slide images (WSIs) corresponding to a particular study from slidescore through the CLI. For clarity, you can easily check the help for this subcommand by typing :bash:`slidescore download-wsis -h`.
+1. **Download whole slide images of a slidescore study**
+
+You can download all the whole slide images (WSIs) corresponding to a particular study from slidescore through the CLI. For clarity, you can easily check the help for this subcommand by typing :bash:`slidescore download-wsis -h`
 
 .. code-block:: console
 
@@ -55,4 +54,37 @@ You can download all the whole slide images (WSIs) corresponding to a particular
    optional arguments:
      -h, --help  show this help message and exit
 
-If you have access to a slidescore study with id = *xyz* then you can download all the WSIs to a local folder *output_dir* on your computer with :bash:`slidescore -s xyz download-wsis output_dir`.
+If you have access to a slidescore study with id = *xyz* then you can download all the WSIs to a local folder *output_dir* on your computer with :bash:`slidescore -s xyz download-wsis output_dir`
+
+2. **Download annotations for WSIs of a slidescore study**
+
+This is an important feature of the slidescore-api. For quick and efficient handling of data annotations, you can download and store them to your computer in different formats. This avoids extra coding effort while developing your deep learning models as the slidescore-api neatly organises the necessary annotations for you. Look at the help of this subcommand using - :bash:`slidescore download-labels -h`
+
+.. code-block:: console
+   
+   usage: slidescore download-labels [-h] [-q QUESTION] [-u USER] [-o--output-type {JSON,RAW,SHAPELY}] [ann_type ...] output_dir
+
+   positional arguments:
+     ann_type              list of required type of annotations
+     output_dir            Directory to save output too.
+
+   optional arguments:
+     -h, --help            show this help message and exit
+     -q QUESTION, --question QUESTION
+                           Question to save annotations for. If not set, will return all questions.
+     -u USER, --user USER  Email(-like) reference indicating submitted annotations on slidescore. If not set, will return questions from all users.
+     -o--output-type {JSON,RAW,SHAPELY}
+                           Type of output
+
+Positional Arguments:
+
+1. :bash:`ann_type` - While annotating on slidescore, users choose different annotation types. One from "POLYGON", "BRUSH", "RECT", "ELLIPSE" and "HEATMAP"
+2. :bash:`output_dir` - Path to the directory where the labels need to be downloaded.
+
+Optional Arguments:
+
+1. Set the :bash:`-q` flag to download the annotations for a particular question of your choice. It could be a training label like "tumor", "blood vessels", "ducts" etc.
+2. Set the :bash:`-u' flag to download the annotations corresponding to a particular user involved in the study. 
+3. Set the :bash:'-o' flag to write the downloaded annotations in a particular format. Choose one from "JSON", "RAW", "SHAPELY".
+
+If you have access to a slidescore study with id = *xyz* then you can download the annotations by all authors corresponding to a label *label_name* as :bash:`SHAPELY` objects to a local folder *output_dir* on your computer with :bash:`slidescore -s xyz download-labels -o SHAPELY -q label_name BRUSH POLYGON output_dir`

@@ -16,7 +16,7 @@ from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
 class ImageAnnotation(NamedTuple):
     slide_name: str
     author: str
-    LABEL: str
+    label: str
     annotation: Union[
         Dict[int, Union[dict, Any]],
         Dict[int, Union[Union[Dict[str, Union[str, Any]], dict], Any]],

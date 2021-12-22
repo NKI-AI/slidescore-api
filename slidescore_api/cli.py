@@ -24,9 +24,9 @@ ANNOSHAPE_TYPES = ["polygon", "rect", "ellipse", "brush", "heatmap"]
 
 
 class LabelOutputType(Enum):
-    json: str = "json"
-    raw: str = "raw"
-    shapely: str = "shapely"
+    JSON: str = "json"
+    RAW: str = "raw"
+    SHAPELY: str = "shapely"
 
 
 def parse_api_token(data: Optional[Path] = None) -> str:
@@ -181,7 +181,7 @@ def download_labels(
     api_token: str,
     study_id: int,
     save_dir: Path,
-    output_type: LabelOutputType,
+    output_type: str,
     ann_type: list,
     email: Optional[str] = None,
     question: Optional[str] = None,
@@ -231,13 +231,13 @@ def download_labels(
         image_id = image["id"]
         annotations = client.get_results(study_id, imageid=image_id, **extra_kwargs)
 
-        if LabelOutputType[output_type] == LabelOutputType.json:
+        if LabelOutputType[output_type] == LabelOutputType.JSON:
             _save_label_as_json(save_dir, image_id, image, annotations)
-        elif LabelOutputType[output_type] == LabelOutputType.raw:
-            with open(save_dir / "annotations.txt", "a", encoding="utf-8") as f:
+        elif LabelOutputType[output_type] == LabelOutputType.RAW:
+            with open(save_dir / "annotations.txt", "a", encoding="utf-8") as file:
                 for annotation in annotations:
-                    f.write(annotation.to_row() + "\n")
-        elif LabelOutputType[output_type] == LabelOutputType.shapely:
+                    file.write(annotation.to_row() + "\n")
+        elif LabelOutputType[output_type] == LabelOutputType.SHAPELY:
             annotation_parser = SlideScoreAnnotations()
             row_iterator = _row_iterator(annotations)
 
@@ -391,7 +391,7 @@ def register_parser(parser: argparse._SubParsersAction):
         help="Type of output",
         type=str,
         choices=LabelOutputType.__members__,
-        default=LabelOutputType.shapely,
+        default=LabelOutputType.SHAPELY,
     )
 
     download_label_parser.add_argument(

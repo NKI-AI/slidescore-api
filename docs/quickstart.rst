@@ -106,8 +106,8 @@ Positional Arguments:
 Optional Arguments:
 
 1. Set the :bash:`-q` flag to download the annotations for a particular question of your choice. It could be a training label like "tumor", "blood vessels", "ducts" etc.
-2. Set the :bash:`-u' flag to download the annotations corresponding to a particular user involved in the study.
-3. Set the :bash:'-o' flag to write the downloaded annotations in a particular format. Choose one from "JSON", "RAW", "SHAPELY".
+2. Set the :bash:`-u` flag to download the annotations corresponding to a particular user involved in the study.
+3. Set the :bash:`-o` flag to write the downloaded annotations in a particular format. Choose one from "JSON", "RAW", "SHAPELY".
 
 **If you have access to a slidescore study with id = *xyz* then you can download the annotations by all authors corresponding to a label *label_name* as :bash:`SHAPELY` objects to a local folder *output_dir* on your computer with:**
 

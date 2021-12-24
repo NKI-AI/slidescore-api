@@ -186,7 +186,13 @@ latex_elements: Dict[str, str] = {
 # (source start file, target name, title, author, documentclass
 # [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, "slidescore_api.tex", "SlideScore API Documentation", "Jonas Teuwen", "manual"),
+    (
+        master_doc,
+        "slidescore_api.tex",
+        "SlideScore API Documentation",
+        "Jonas Teuwen",
+        "manual",
+    ),
 ]
 
 

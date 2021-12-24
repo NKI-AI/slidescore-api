@@ -21,4 +21,4 @@ jobs:
         pip install -e ".[dev]"
     - name: Analysing the code with pylint
       run: |
-        pylint slidescore_api --errors-only
+        pylint slidescore_api

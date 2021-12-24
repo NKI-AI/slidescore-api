@@ -137,6 +137,8 @@ def retrieve_questions(
 
     Returns
     -------
+    scores: dict
+        Returns scores corresponding to a particular question in the slidescore study.
 
     """
     client = build_client(slidescore_url, api_token, disable_certificate_check)

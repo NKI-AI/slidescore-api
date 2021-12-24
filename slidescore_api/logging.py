@@ -1,6 +1,5 @@
 # coding=utf-8
-# Copyright (c) SlideScore API contributors
-"""Central logging module of slidescore-api"""
+# Copyright (c) slidescore_api contributors
 import datetime
 import logging
 import os
@@ -53,11 +52,11 @@ def setup_logging(
 
     if filename:
         filename.parent.mkdir(parents=True, exist_ok=True)
-        filehandler = logging.FileHandler(filename)
-        filehandler.setLevel(log_level)
+        fh = logging.FileHandler(filename)
+        fh.setLevel(log_level)
         formatter = logging.Formatter(formatter_str)
-        filehandler.setFormatter(formatter)
-        root.addHandler(filehandler)
+        fh.setFormatter(formatter)
+        root.addHandler(fh)
 
 
 def build_cli_logger(

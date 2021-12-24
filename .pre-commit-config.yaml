@@ -57,3 +57,4 @@ repos:
         types: [python]
         args:
             - slidescore_api
+            - --errors-only

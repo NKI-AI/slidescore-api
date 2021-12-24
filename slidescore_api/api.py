@@ -10,7 +10,8 @@ import re
 import shutil
 import sys
 import urllib.parse
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+import zipfile
+from typing import Dict, List, Optional, Tuple, Union
 
 import requests
 from PIL import Image
@@ -42,7 +43,6 @@ type_to_name = [
 
 
 class SlideScoreResult:
-    # pylint: disable=too-many-instance-attributes
     """Slidescore wrapper class for storing SlideScore server responses."""
 
     def __init__(self, slide_dict: Dict = None):
@@ -52,7 +52,6 @@ class SlideScoreResult:
         slide_dict : dict
             SlideScore server response for annotations/labels.
         """
-
         self.__slide_dict = slide_dict
         if not slide_dict:
             slide_dict = {
@@ -85,14 +84,6 @@ class SlideScoreResult:
                     self.points = annos
 
     def to_row(self) -> str:
-        """
-        Convert dictionary output to a tab-separated string
-
-        Returns
-        -------
-        str
-            Tab separated string
-        """
         if self.__slide_dict is None:
             return ""
         ret = str(self.image_id) + "\t" + self.image_name + "\t" + self.user + "\t"
@@ -139,6 +130,8 @@ class APIClient:
         self.verify_certificate = not disable_cert_checking
         self.base_url: Union[str, None] = None
         self.cookie: Union[str, None] = None
+
+        # TODO: Implement using from requests.auth import HTTPBasicAuth, with wrapper to requests.
 
     def perform_request(
         self,
@@ -200,18 +193,15 @@ class APIClient:
         dict
             Dictionary containing the images in the study.
         """
+        # TODO: Convert to NamedTuple
         response = self.perform_request("Images", {"studyid": study_id})
         rjson = response.json()
-        self.logger.info("Found %s slides with SlideScore API for study ID %s.", len(rjson), study_id)
+        self.logger.info(f"found {len(rjson)} slides with SlideScore API for study ID {study_id}.")
 
         return rjson
 
     def download_slide(
-        self,
-        study_id: int,
-        image: dict,
-        save_dir: pathlib.Path,
-        skip_if_exists: bool = True,
+        self, study_id: int, image: dict, save_dir: pathlib.Path, skip_if_exists: bool = True
     ) -> pathlib.Path:
         """
         Downloads a WSI from the SlideScore server, needs study_id and image.
@@ -231,6 +221,7 @@ class APIClient:
             Filename the output has been written to.
 
         """
+        # TODO: Allow to disable verbosity.
         image_id = image["id"]
         filesize = image["fileSize"]
         response = self.perform_request(
@@ -242,12 +233,12 @@ class APIClient:
 
         raw = response.headers["Content-Disposition"]
         filename = self._get_filename(raw)
-        self.logger.info("Writing to %s (reporting file size of %s)...", save_dir / filename, filesize)
+        self.logger.info(f"Writing to {save_dir / filename} (reporting file size of {filesize})...")
         write_to = save_dir / filename
         history = self._read_from_history(save_dir)
 
         if skip_if_exists and str(filename) in history:
-            self.logger.info("File %s already downloaded. Skipping.", save_dir / filename)
+            self.logger.info(f"File {save_dir / filename} already downloaded. Skipping.")
             response.close()
             return write_to
 
@@ -259,15 +250,15 @@ class APIClient:
             miniters=1,
             desc=filename,
             total=None,
-        ) as file:
+        ) as f:
             for chunk in response.iter_content(chunk_size=4096):
-                file.write(chunk)
+                f.write(chunk)
         shutil.move(str(temp_write_to), str(write_to))
 
         self._write_to_history(save_dir, write_to.name)
         return write_to
 
-    def get_results(self, study_id: int, **kwargs) -> Iterable[SlideScoreResult]:
+    def get_results(self, study_id: int, **kwargs) -> List[SlideScoreResult]:
         """
         Basic functionality to download all annotations made for a particular study.
         Returns a SlideScoreResult class wrapper containing the information.
@@ -291,8 +282,7 @@ class APIClient:
 
         response = self.perform_request("Scores", {"studyid": study_id, **kwargs})
         rjson = response.json()
-        for line in rjson:
-            yield SlideScoreResult(line)
+        return [SlideScoreResult(r) for r in rjson]
 
     def get_config(self, study_id: int) -> dict:
         """
@@ -342,7 +332,7 @@ class APIClient:
             raise SlideScoreErrorException(rjson["log"])
         return True
 
-    def upload_asap(  # pylint: disable=R0913
+    def upload_asap(
         self,
         image_id: int,
         user: str,
@@ -435,7 +425,7 @@ class APIClient:
         """
         (self.base_url, self.cookie) = self.get_image_server_url(image_id)
 
-    def get_tile(self, level: int, x_coord: int, y_coord: int) -> Image:
+    def get_tile(self, level: int, x: int, y: int) -> Image:
         """
         Gets tile from WSI for given magnification level.
         A WSI at any given magnification level is converted into an x by y tile matrix. This method downloads the tile
@@ -446,8 +436,8 @@ class APIClient:
         Parameters
         ----------
         level : int
-        x_coord : x
-        y_coord : x
+        x : x
+        y : x
 
         Returns
         -------
@@ -458,7 +448,7 @@ class APIClient:
             raise RuntimeError
 
         response = requests.get(
-            self.base_url + f"/{str(level)}/{str(x_coord)}_{str(y_coord)}.jpeg",
+            self.base_url + f"/{str(level)}/{str(x)}_{str(y)}.jpeg",
             stream=True,
             cookies=dict(t=self.cookie),
         )
@@ -467,25 +457,25 @@ class APIClient:
         raise SlideScoreErrorException(f"Expected response code 200. Got {response.status_code}.")
 
     @staticmethod
-    def _get_filename(string: str) -> str:
+    def _get_filename(s: str) -> str:
         """
         Method to extract the filename from the HTTP header.
 
         Parameters
         ----------
-        string : str
+        s : str
 
         Returns
         -------
         str
             Filename extracted from HTTP header.
         """
-        filename = re.findall(r"filename\*?=([^;]+)", string, flags=re.IGNORECASE)
+        filename = re.findall(r"filename\*?=([^;]+)", s, flags=re.IGNORECASE)
         return filename[0].strip().strip('"')
 
     @staticmethod
     def _write_to_history(save_dir: pathlib.Path, filename: Union[str, pathlib.Path]):
-        with open(save_dir / ".download_history.txt", "a", encoding="utf-8") as file:
+        with open(save_dir / ".download_history.txt", "a") as file:
             file.write(f"{filename}\n")
 
     @staticmethod
@@ -494,7 +484,7 @@ class APIClient:
         if not history_filename.is_file():
             return []
 
-        with open(history_filename, "r", encoding="utf-8") as file:
+        with open(history_filename, "r") as file:
             content = file.readlines()
 
         content = [_.strip() for _ in content]
@@ -503,6 +493,8 @@ class APIClient:
 
 class SlideScoreErrorException(Exception):
     """Class to hold a SlideScore exception."""
+
+    pass
 
 
 def build_client(slidescore_url: str, api_token: str, disable_certificate_check: bool = False) -> APIClient:
@@ -525,11 +517,11 @@ def build_client(slidescore_url: str, api_token: str, disable_certificate_check:
     """
     try:
         client = APIClient(slidescore_url, api_token, disable_cert_checking=disable_certificate_check)
-    except requests.exceptions.SSLError as exception:
+    except requests.exceptions.SSLError as e:
         sys.exit(
             f"SSLError, possibly because the SSL certificate cannot be read. "
             f"If you know what you are doing you can try --disable-certificate-check. "
-            f"Full error: {exception}"
+            f"Full error: {e}"
         )
 
     return client

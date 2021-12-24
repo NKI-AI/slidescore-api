@@ -19,7 +19,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install mypy
-        python -m pip install types-requests
         python -m pip install -e ".[dev]"
     - name: mypy
       run: |

@@ -199,6 +199,10 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
         Study id as used by SlideScore.
     save_dir: Path
         Directory to save the labels to.
+    output_type: str
+        User defined output format in which the annotations need to be saved.
+    ann_type: list
+        User choice for the kind of annotation type that is needed.
     email: str, optional
         The author email/name as registered on SlideScore to download those specific annotations.
     question : str

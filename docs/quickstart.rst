@@ -30,21 +30,37 @@ If the :doc:`/installation` went smoothly, you should be able to run :bash:`slid
         -v, --verbose         Verbosity level, e.g. -v, -vv, -vvv (default: 0)
 
 
-First things first
----------------------
+Setting things up with the API key
+==================================
 In order to use the slidescore API, you need to get an API key approved for a particular study/studies. You may reach out to Jan Hudecek (j.hudecek@nki.nl) and get this done. Once you have the API key, store it securely. **This is important because the API key can allow users to access proprietary data of the NKI and you do not want it in the wrong hands!**
 
-It is a good practice to export the API key to your working environment only when you plan to use the slidescore API. While using the slidescore-api in your python programs, set an environment variable - :bash:`export SLIDESCORE_API_KEY="your API key goes here"`. While using the command line interface (CLI), the environment variable can be set in a similar manner or simply set the :bash:`-t` flag as the path to your API token.
+1. It is a good practice to export the API key to your working environment only when you plan to use the slidescore API. 
+2. While using the slidescore-api in your python programs, set an environment variable - :bash:`export SLIDESCORE_API_KEY="your API key goes here"`. 
+3. While using the command line interface (CLI), the environment variable can be set in a similar manner or simply set the :bash:`-t` flag as the path to your API token.
 
 Note: You get access to only those slidescore studies which are assigned to you through the unique API key.
 
 Now we are ready to use the API. Let us go through each functionality of the API.
 
 Command Line Interface
-------------------------
-1. **Download whole slide images of a slidescore study**
+=======================
 
-You can download all the whole slide images (WSIs) corresponding to a particular study from slidescore through the CLI. For clarity, you can easily check the help for this subcommand by typing :bash:`slidescore download-wsis -h`
+CLI cheat sheet
+-----------------
+   1. To download WSIs to a folder: 
+      
+      :bash:`slidescore -s xyz download-wsis output_dir`
+      
+      
+   2. To download annotations (of type BRUSH and POLYGON) from a study in Shapely format:
+      
+      :bash:`slidescore -s xyz download-labels -o SHAPELY -q label_name BRUSH POLYGON output_dir`
+
+Download whole slide images of a slidescore study
+--------------------------------------------------------
+
+   1. You can download all the whole slide images (WSIs) corresponding to a particular study from slidescore through the CLI. 
+   2. For clarity, you can easily check the help for this subcommand by typing :bash:`slidescore download-wsis -h`
 
 .. code-block:: console
 
@@ -56,11 +72,15 @@ You can download all the whole slide images (WSIs) corresponding to a particular
    optional arguments:
      -h, --help  show this help message and exit
 
-If you have access to a slidescore study with id = *xyz* then you can download all the WSIs to a local folder *output_dir* on your computer with :bash:`slidescore -s xyz download-wsis output_dir`
+**If you have access to a slidescore study with id = *xyz* then you can download all the WSIs to a local folder *output_dir* on your computer with:**
 
-2. **Download annotations for WSIs of a slidescore study**
+                              :bash:`slidescore -s xyz download-wsis output_dir`
 
-This is an important feature of the slidescore-api. For quick and efficient handling of data annotations, you can download and store them to your computer in different formats. This avoids extra coding effort while developing your deep learning models as the slidescore-api neatly organises the necessary annotations for you. Look at the help of this subcommand using - :bash:`slidescore download-labels -h`
+Download annotations for WSIs of a slidescore study
+------------------------------------------------------------
+
+   1. This is an important feature of the slidescore-api. For quick and efficient handling of data annotations, you can download and store them to your computer in different formats. This avoids extra coding effort while developing your deep learning models as the slidescore-api neatly organises the necessary annotations for you. 
+   2. Look at the help of this subcommand using - :bash:`slidescore download-labels -h`
 
 .. code-block:: console
 
@@ -89,4 +109,6 @@ Optional Arguments:
 2. Set the :bash:`-u' flag to download the annotations corresponding to a particular user involved in the study.
 3. Set the :bash:'-o' flag to write the downloaded annotations in a particular format. Choose one from "JSON", "RAW", "SHAPELY".
 
-If you have access to a slidescore study with id = *xyz* then you can download the annotations by all authors corresponding to a label *label_name* as :bash:`SHAPELY` objects to a local folder *output_dir* on your computer with :bash:`slidescore -s xyz download-labels -o SHAPELY -q label_name BRUSH POLYGON output_dir`
+**If you have access to a slidescore study with id = *xyz* then you can download the annotations by all authors corresponding to a label *label_name* as :bash:`SHAPELY` objects to a local folder *output_dir* on your computer with:**
+
+                           :bash:`slidescore -s xyz download-labels -o SHAPELY -q label_name BRUSH POLYGON output_dir`

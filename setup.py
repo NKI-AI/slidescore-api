@@ -4,7 +4,6 @@
 """The setup script."""
 
 import ast
-from typing import List
 
 from setuptools import find_packages, setup  # type: ignore
 
@@ -40,11 +39,7 @@ setup(
             "slidescore=slidescore_api.cli:cli",
         ],
     },
-    install_requires=[
-        "requests",
-        "tqdm",
-        "Pillow",
-    ],
+    install_requires=["requests", "tqdm", "Pillow", "Shapely", "numpy"],
     extras_require={
         "dev": [
             "pytest",

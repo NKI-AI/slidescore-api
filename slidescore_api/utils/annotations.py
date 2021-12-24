@@ -326,14 +326,19 @@ class SlideScoreAnnotations:
 
         Parameters
         ----------
-        row_iterator
-        filter_empty
-        filter_author
-        filter_label
+        row_iterator: Iterable
+            An iterable object that holds a single row of annotations and attributes.
+        filter_empty: bool
+            A binary flag to indicate whether or not empty rows must be filtered.
+        filter_author: str
+            Email-like string to look for annotations corresponding to a particular annotation author.
+        filter_label:
+            a string that indicates a label name in the slidescore study deemed necessary by the user.
 
         Returns
         -------
-        row_annotation
+        row_annotation: ImageAnnotation
+            A named tuple containing the attributes and annotations of a single WSI.
         """
         for row in row_iterator:
             _return = self._parse_annotation_row(row, filter_empty=filter_empty)

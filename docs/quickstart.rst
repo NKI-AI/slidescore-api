@@ -28,8 +28,8 @@ If the :doc:`/installation` went smoothly, you should be able to run :bash:`slid
                               Disable the certificate check. (default: False)
         --no-log              Disable logging. (default: False)
         -v, --verbose         Verbosity level, e.g. -v, -vv, -vvv (default: 0)
-  
-  
+
+
 First things first
 ---------------------
 In order to use the slidescore API, you need to get an API key approved for a particular study/studies. You may reach out to Jan Hudecek (j.hudecek@nki.nl) and get this done. Once you have the API key, store it securely. **This is important because the API key can allow users to access proprietary data of the NKI and you do not want it in the wrong hands!**
@@ -63,7 +63,7 @@ If you have access to a slidescore study with id = *xyz* then you can download a
 This is an important feature of the slidescore-api. For quick and efficient handling of data annotations, you can download and store them to your computer in different formats. This avoids extra coding effort while developing your deep learning models as the slidescore-api neatly organises the necessary annotations for you. Look at the help of this subcommand using - :bash:`slidescore download-labels -h`
 
 .. code-block:: console
-   
+
    usage: slidescore download-labels [-h] [-q QUESTION] [-u USER] [-o--output-type {JSON,RAW,SHAPELY}] [ann_type ...] output_dir
 
    positional arguments:
@@ -86,7 +86,7 @@ Positional Arguments:
 Optional Arguments:
 
 1. Set the :bash:`-q` flag to download the annotations for a particular question of your choice. It could be a training label like "tumor", "blood vessels", "ducts" etc.
-2. Set the :bash:`-u' flag to download the annotations corresponding to a particular user involved in the study. 
+2. Set the :bash:`-u' flag to download the annotations corresponding to a particular user involved in the study.
 3. Set the :bash:'-o' flag to write the downloaded annotations in a particular format. Choose one from "JSON", "RAW", "SHAPELY".
 
 If you have access to a slidescore study with id = *xyz* then you can download the annotations by all authors corresponding to a label *label_name* as :bash:`SHAPELY` objects to a local folder *output_dir* on your computer with :bash:`slidescore -s xyz download-labels -o SHAPELY -q label_name BRUSH POLYGON output_dir`

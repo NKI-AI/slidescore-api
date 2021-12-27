@@ -241,7 +241,9 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
             annotation_parser = SlideScoreAnnotations()
             row_iterator = _row_iterator(annotations)
 
-            for curr_annotation in annotation_parser.from_iterable(row_iterator):
+            for curr_annotation in annotation_parser.from_iterable(
+                row_iterator, filter_author=email, filter_label=question
+            ):
                 save_shapely(curr_annotation, save_dir=save_dir, filter_type=ann_type)
         else:
             raise RuntimeError(f"Output type {output_type} not supported.")

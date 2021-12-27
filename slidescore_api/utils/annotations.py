@@ -316,6 +316,8 @@ class SlideScoreAnnotations:
         """
         for line in self.from_iterable(self._row_iterator):
             self._annotated_images.append(line.slide_name)
+        self.unannotated = 0
+        self.annotations_generated = 0
         return self._annotated_images
 
     def from_iterable(

@@ -227,6 +227,8 @@ class SlideScoreAnnotations:
         self.annotations_generated = 0
         self.num_empty = 0
         self.num_entries = 0
+        self._annotated_images = []
+        self._row_iterator = None
 
     def check(self) -> None:
         """
@@ -264,7 +266,8 @@ class SlideScoreAnnotations:
             if self._headers != annotation_file.readline().strip().split("\t"):
                 raise RuntimeError("Header missing.")
             for line in annotation_file:
-                yield line
+                self._row_iterator = line
+                yield self._row_iterator
 
     def _parse_annotation_row(self, row, filter_empty):  # pylint:disable=too-many-branches
         _row = dict(zip(self._headers, row.split("\t")))
@@ -301,6 +304,19 @@ class SlideScoreAnnotations:
                 return None
 
         return _row, data
+
+    @property
+    def annotated_images_list(self) -> list:
+        """
+        Get a list of all annotated images from a given slidescore study
+
+        Returns
+        -------
+        list of all slide names that are annotated in a slidescore study
+        """
+        for line in self.from_iterable(self._row_iterator):
+            self._annotated_images.append(line.slide_name)
+        return self._annotated_images
 
     def from_iterable(
         self,

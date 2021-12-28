@@ -80,8 +80,8 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
         for polygon_id, _ in enumerate(annotations.annotation):
             # Handles only polygon and brush type annotations.
             if (
-                AnnotationType[annotations.annotation[polygon_id]["type"]] == AnnotationType.POLYGON
-                or AnnotationType[annotations.annotation[polygon_id]["type"]] == AnnotationType.BRUSH
+                AnnotationType[annotations.annotation[polygon_id]["type"].upper()] == AnnotationType.POLYGON
+                or AnnotationType[annotations.annotation[polygon_id]["type"].upper()] == AnnotationType.BRUSH
             ):
                 _save_polygon_as_shapely(annotations, polygon_id, file)
 

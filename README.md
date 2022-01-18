@@ -34,6 +34,6 @@ For uploading or downloading labels or whole-slide images, the following steps n
   - This question needs to be added to the study on slidescore: go to →  study →  edit study →  questions →  select question type e.g. annotate shapes for bounding box →  name the question by clicking on it after it appears under "scoring sheet". The colour of the annotation can be also changed here.
 - answer: type string 
   - Needs to be in a very specific format: “[{annotation 1}, {annotation 2}, {annotation n}]”. This list is inside the string.
-  - It can be achieved with using json.dumps(wsi_results)
+  - Using json.dumps(), you can transform your list of annotation dictionaries into a sting in the format above. 
   - Every annotation is also in a specific format. 
     - For rectangle annotations: {"type": "rect", "corner": {"x": 123, "y": 456}, "size": {"x": 12, "y": 34}}. The corner coordinates refer to the top left corner of the rect. The size coordinates refer to the width (x) and the height (y). 

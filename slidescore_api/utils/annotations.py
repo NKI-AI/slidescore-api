@@ -46,15 +46,6 @@ def _check_type_error(filter_type: list) -> None:
             raise TypeError(f"Annotation type {f_type} is not supported.")
 
 
-def _save_polygon_as_shapely(annotations, polygon_id, file):
-    if len(annotations.annotation[polygon_id]["points"]) > 0:
-        json.dump(
-            mapping(annotations.annotation[polygon_id]["points"]),
-            file,
-            indent=2,
-        )
-
-
 def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list) -> None:
     """
     Given a single Annotation of a WSI, this function writes them as shapely objects to disc
@@ -77,13 +68,16 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     save_path = save_dir / "annotations" / annotations.author / annotations.slide_name
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
+        dump_list: list = []
         for polygon_id, _ in enumerate(annotations.annotation):
             # Handles only polygon and brush type annotations.
             if (
                 AnnotationType[annotations.annotation[polygon_id]["type"].upper()] == AnnotationType.POLYGON
                 or AnnotationType[annotations.annotation[polygon_id]["type"].upper()] == AnnotationType.BRUSH
             ):
-                _save_polygon_as_shapely(annotations, polygon_id, file)
+                if len(annotations.annotation[polygon_id]["points"]) > 0:
+                    dump_list.append(mapping(annotations.annotation[polygon_id]["points"]))
+        json.dump(dump_list, file, indent=2)
 
 
 def _parse_brush_annotation(annotations: Dict) -> Dict:

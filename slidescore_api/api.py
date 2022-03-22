@@ -241,9 +241,9 @@ class APIClient:
         )
 
         raw = response.headers["Content-Disposition"]
-        filename = self._get_filename(image_id, raw)
+        filename = self._get_filename(raw)
         self.logger.info("Writing to %s (reporting file size of %s)...", save_dir / filename, filesize)
-        write_to = save_dir / filename
+        write_to = save_dir / image_id / filename
         history = self._read_from_history(save_dir)
 
         if skip_if_exists and str(filename) in history:
@@ -482,7 +482,8 @@ class APIClient:
         """
         filename = re.findall(r"filename\*?=([^;]+)", string, flags=re.IGNORECASE)
         filename = filename[0].strip().strip('"')
-        return pathlib.Path(prefix) / filename
+        return filename
+
 
     @staticmethod
     def _write_to_history(save_dir: pathlib.Path, filename: Union[str, pathlib.Path]):

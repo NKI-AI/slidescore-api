@@ -241,7 +241,7 @@ class APIClient:
         )
 
         raw = response.headers["Content-Disposition"]
-        filename = self._get_filename(raw)
+        filename = self._get_filename(image_id, raw)
         self.logger.info("Writing to %s (reporting file size of %s)...", save_dir / filename, filesize)
         write_to = save_dir / filename
         history = self._read_from_history(save_dir)
@@ -467,7 +467,7 @@ class APIClient:
         raise SlideScoreErrorException(f"Expected response code 200. Got {response.status_code}.")
 
     @staticmethod
-    def _get_filename(string: str) -> str:
+    def _get_filename(prefix: str, string: str) -> pathlib.Path:
         """
         Method to extract the filename from the HTTP header.
 
@@ -481,7 +481,8 @@ class APIClient:
             Filename extracted from HTTP header.
         """
         filename = re.findall(r"filename\*?=([^;]+)", string, flags=re.IGNORECASE)
-        return filename[0].strip().strip('"')
+        filename = filename[0].strip().strip('"')
+        return pathlib.Path(prefix) / filename
 
     @staticmethod
     def _write_to_history(save_dir: pathlib.Path, filename: Union[str, pathlib.Path]):

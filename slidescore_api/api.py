@@ -243,7 +243,8 @@ class APIClient:
         raw = response.headers["Content-Disposition"]
         filename = self._get_filename(raw)
         self.logger.info("Writing to %s (reporting file size of %s)...", save_dir / filename, filesize)
-        write_to = save_dir / image_id / filename
+        save_dir = save_dir / image_id
+        write_to = save_dir / filename
         history = self._read_from_history(save_dir)
 
         if skip_if_exists and str(filename) in history:

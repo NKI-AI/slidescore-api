@@ -438,7 +438,7 @@ class APIClient:
         raise SlideScoreErrorException(f"Expected response code 200. Got {response.status_code}.")
 
     @staticmethod
-    def _get_filename(string: str) -> str:
+    def _get_filename(string: str) -> pathlib.Path:
         """
         Method to extract the filename from the HTTP header.
 

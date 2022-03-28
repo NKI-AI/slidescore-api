@@ -479,7 +479,8 @@ class APIClient:
             Filename extracted from HTTP header.
         """
         filename = re.findall(r"filename\*?=([^;]+)", string, flags=re.IGNORECASE)
-        return filename[0].strip().strip('"')
+        filename = filename[0].strip().strip('"')
+        return filename
 
     @staticmethod
     def _write_to_history(save_dir: pathlib.Path, filename: Union[str, pathlib.Path]):

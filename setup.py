@@ -34,11 +34,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
     ],
-    entry_points={
-        "console_scripts": [
-            "slidescore=slidescore_api.cli:cli",
-        ],
-    },
+    entry_points={"console_scripts": ["slidescore=slidescore_api.cli:cli",],},
     install_requires=["requests", "tqdm", "Pillow", "Shapely", "numpy"],
     extras_require={
         "dev": [

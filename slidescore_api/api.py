@@ -10,7 +10,7 @@ import re
 import shutil
 import sys
 import urllib.parse
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union, Any
 
 import requests
 from PIL import Image
@@ -460,7 +460,7 @@ class APIClient:
             file.write(f"{filename}\n")
 
     @staticmethod
-    def _read_from_history(save_dir: pathlib.Path):
+    def _read_from_history(save_dir: pathlib.Path) -> List[Any]:
         history_filename = save_dir / ".download_history.txt"
         if not history_filename.is_file():
             return []

@@ -23,7 +23,8 @@ class ImageAnnotation(NamedTuple):
     author: str
     label: str
     annotation: Union[
-        Dict[int, Union[dict, Any]], Dict[int, Union[Union[Dict[str, Union[str, Any]], dict], Any]],
+        Dict[int, Union[dict, Any]],
+        Dict[int, Union[Union[Dict[str, Union[str, Any]], dict], Any]],
     ]
 
 
@@ -314,7 +315,11 @@ class SlideScoreAnnotations:
         return self._annotated_images
 
     def from_iterable(
-        self, row_iterator: Iterable, filter_author: str = None, filter_label: str = None, filter_empty=True,
+        self,
+        row_iterator: Iterable,
+        filter_author: str = None,
+        filter_label: str = None,
+        filter_empty=True,
     ) -> Iterable:
         """
         Function to convert slidescore annotations (txt file) to an iterable.
@@ -355,7 +360,10 @@ class SlideScoreAnnotations:
             _row, data = _return
 
             row_annotation = ImageAnnotation(
-                slide_name=_row["Image Name"], author=_row["By"], label=_row["Question"], annotation=data,
+                slide_name=_row["Image Name"],
+                author=_row["By"],
+                label=_row["Question"],
+                annotation=data,
             )
 
             if filter_author is not None or filter_label is not None:

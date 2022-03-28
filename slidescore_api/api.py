@@ -141,7 +141,11 @@ class APIClient:
         self.cookie: Union[str, None] = None
 
     def perform_request(
-        self, request: str, data: Optional[Dict], method: str = "POST", stream: bool = False,
+        self,
+        request: str,
+        data: Optional[Dict],
+        method: str = "POST",
+        stream: bool = False,
     ) -> Response:
         """
         Base functionality for making requests to slidescore servers. Request should\
@@ -171,7 +175,13 @@ class APIClient:
         if method == "POST":
             response = requests.post(url, verify=self.verify_certificate, headers=headers, data=data)
         else:
-            response = requests.get(url, verify=self.verify_certificate, headers=headers, data=data, stream=stream,)
+            response = requests.get(
+                url,
+                verify=self.verify_certificate,
+                headers=headers,
+                data=data,
+                stream=stream,
+            )
         if response.status_code != 200:
             response.raise_for_status()
 
@@ -197,7 +207,11 @@ class APIClient:
         return rjson
 
     def download_slide(
-        self, study_id: int, image: dict, save_dir: pathlib.Path, skip_if_exists: bool = True,
+        self,
+        study_id: int,
+        image: dict,
+        save_dir: pathlib.Path,
+        skip_if_exists: bool = True,
     ) -> pathlib.Path:
         """
         Downloads a WSI from the SlideScore server, needs study_id and image.
@@ -220,7 +234,10 @@ class APIClient:
         image_id = image["id"]
         filesize = image["fileSize"]
         response = self.perform_request(
-            "DownloadSlide", {"studyid": study_id, "imageid": image_id}, method="GET", stream=True,
+            "DownloadSlide",
+            {"studyid": study_id, "imageid": image_id},
+            method="GET",
+            stream=True,
         )
 
         raw = response.headers["Content-Disposition"]
@@ -236,7 +253,13 @@ class APIClient:
 
         temp_write_to = write_to.with_suffix(write_to.suffix + ".partial")
 
-        with tqdm.wrapattr(open(temp_write_to, "wb"), "write", miniters=1, desc=filename, total=None,) as file:
+        with tqdm.wrapattr(
+            open(temp_write_to, "wb"),
+            "write",
+            miniters=1,
+            desc=filename,
+            total=None,
+        ) as file:
             for chunk in response.iter_content(chunk_size=4096):
                 file.write(chunk)
         shutil.move(str(temp_write_to), str(write_to))
@@ -320,7 +343,12 @@ class APIClient:
         return True
 
     def upload_asap(  # pylint: disable=R0913
-        self, image_id: int, user: str, questions_map: Dict, annotation_name: str, asap_annotation: Dict,
+        self,
+        image_id: int,
+        user: str,
+        questions_map: Dict,
+        annotation_name: str,
+        asap_annotation: Dict,
     ) -> bool:
         """Upload annotations for study using ASAP functionality."""
         response = self.perform_request(
@@ -361,7 +389,8 @@ class APIClient:
     def export_asap(self, image_id: int, user: str, question: str) -> str:
         """Downloads ASAP annotations."""
         response = self.perform_request(
-            "ExportASAPAnnotations", {"imageid": image_id, "user": user, "question": question},
+            "ExportASAPAnnotations",
+            {"imageid": image_id, "user": user, "question": question},
         )
         rjson = response.json()
         if not rjson["success"]:

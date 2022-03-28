@@ -60,7 +60,12 @@ def setup_logging(
         root.addHandler(filehandler)
 
 
-def build_cli_logger(name: str, log_to_file: bool, verbosity_level: int, log_directory: PathLike = ".",) -> None:
+def build_cli_logger(
+    name: str,
+    log_to_file: bool,
+    verbosity_level: int,
+    log_directory: PathLike = ".",
+) -> None:
     """
     Setup logging for the SlideScore API.
 

@@ -101,7 +101,13 @@ def _upload_labels(args: argparse.Namespace) -> None:
             answer = row["answer"].replace("'", '"') + "\n"
 
             wsi_result = SlideScoreResult(
-                {"imageID": image_id, "imageName": image_name, "user": user, "question": question, "answer": answer,}
+                {
+                    "imageID": image_id,
+                    "imageName": image_name,
+                    "user": user,
+                    "question": question,
+                    "answer": answer,
+                }
             )
             wsi_results.append(wsi_result)
 
@@ -109,7 +115,10 @@ def _upload_labels(args: argparse.Namespace) -> None:
 
 
 def retrieve_questions(
-    slidescore_url: str, api_token: str, study_id: int, disable_certificate_check: bool = False,
+    slidescore_url: str,
+    api_token: str,
+    study_id: int,
+    disable_certificate_check: bool = False,
 ) -> dict:
     """
     Retrieve the questions for a given study from SlideScore.
@@ -354,7 +363,9 @@ def register_parser(parser: argparse._SubParsersAction):
     # Download slides to a subfolder
     download_wsi_parser = parser.add_parser("download-wsis", help="Download WSIs from SlideScore.")
     download_wsi_parser.add_argument(
-        "output_dir", type=pathlib.Path, help="Directory to save output too.",
+        "output_dir",
+        type=pathlib.Path,
+        help="Directory to save output too.",
     )
 
     download_wsi_parser.set_defaults(subcommand=_download_wsi)
@@ -390,13 +401,18 @@ def register_parser(parser: argparse._SubParsersAction):
         "ann_type", nargs="*", type=str, help="list of required type of annotations", default=["brush", "polygon"]
     )
     download_label_parser.add_argument(
-        "output_dir", type=pathlib.Path, help="Directory to save output too.",
+        "output_dir",
+        type=pathlib.Path,
+        help="Directory to save output too.",
     )
     download_label_parser.set_defaults(subcommand=_download_labels)
 
     upload_label_parser = parser.add_parser("upload-labels", help="Upload labels to SlideScore.")
     upload_label_parser.add_argument(
-        "--csv-delimiter", type=str, help="The delimiter character used in the csv file.", default="\t",
+        "--csv-delimiter",
+        type=str,
+        help="The delimiter character used in the csv file.",
+        default="\t",
     )
     upload_label_parser.add_argument(
         "-u",
@@ -408,7 +424,10 @@ def register_parser(parser: argparse._SubParsersAction):
         required=False,
     )
     upload_label_parser.add_argument(
-        "--csv-fieldnames", nargs="*", type=str, default=["imageID", "imageName", "user", "question", "answer"],
+        "--csv-fieldnames",
+        nargs="*",
+        type=str,
+        default=["imageID", "imageName", "user", "question", "answer"],
     )
     upload_label_parser.add_argument(
         "-r",
@@ -432,7 +451,10 @@ def cli():
     # From https://stackoverflow.com/questions/17073688/how-to-use-argparse-subparsers-correctly
     slidescore_parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     slidescore_parser.add_argument(
-        "--slidescore-url", type=str, help="URL for SlideScore", default="https://slidescore.nki.nl/",
+        "--slidescore-url",
+        type=str,
+        help="URL for SlideScore",
+        default="https://slidescore.nki.nl/",
     )
     slidescore_parser.add_argument(
         "-t",
@@ -444,16 +466,29 @@ def cli():
         "Will overwrite the environment variable if set.",
     )
     slidescore_parser.add_argument(
-        "-s", "--study", dest="study_id", help="SlideScore Study ID", type=int, required=True,
+        "-s",
+        "--study",
+        dest="study_id",
+        help="SlideScore Study ID",
+        type=int,
+        required=True,
     )
     slidescore_parser.add_argument(
-        "--disable-certificate-check", help="Disable the certificate check.", action="store_true",
+        "--disable-certificate-check",
+        help="Disable the certificate check.",
+        action="store_true",
     )
     slidescore_parser.add_argument(
-        "--no-log", help="Disable logging.", action="store_true",
+        "--no-log",
+        help="Disable logging.",
+        action="store_true",
     )
     slidescore_parser.add_argument(
-        "-v", "--verbose", action="count", help="Verbosity level, e.g. -v, -vv, -vvv", default=0,
+        "-v",
+        "--verbose",
+        action="count",
+        help="Verbosity level, e.g. -v, -vv, -vvv",
+        default=0,
     )
 
     slidescore_subparsers = slidescore_parser.add_subparsers(help="Possible SlideScore CLI utils to run.")

@@ -467,14 +467,12 @@ class APIClient:
         raise SlideScoreErrorException(f"Expected response code 200. Got {response.status_code}.")
 
     @staticmethod
-    def _get_filename(string: str) -> pathlib.Path:
+    def _get_filename(string: str) -> str:
         """
         Method to extract the filename from the HTTP header.
-
         Parameters
         ----------
         string : str
-
         Returns
         -------
         str
@@ -484,12 +482,12 @@ class APIClient:
         return filename[0].strip().strip('"')
 
     @staticmethod
-    def _write_to_history(save_dir: pathlib.Path, filename: Union[str, pathlib.Path]) -> None:
+    def _write_to_history(save_dir: pathlib.Path, filename: Union[str, pathlib.Path]):
         with open(save_dir / ".download_history.txt", "a", encoding="utf-8") as file:
             file.write(f"{filename}\n")
 
     @staticmethod
-    def _read_from_history(save_dir: pathlib.Path) -> List:
+    def _read_from_history(save_dir: pathlib.Path):
         history_filename = save_dir / ".download_history.txt"
         if not history_filename.is_file():
             return []

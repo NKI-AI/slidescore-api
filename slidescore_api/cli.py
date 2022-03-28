@@ -171,7 +171,7 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     study_id: int,
     save_dir: Path,
     output_type: str,
-    ann_type: str,
+    ann_type: list,
     email: Optional[str] = None,
     question: Optional[str] = None,
     disable_certificate_check: bool = False,

@@ -10,7 +10,7 @@ import re
 import shutil
 import sys
 import urllib.parse
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union, Any
 
 import requests
 from PIL import Image
@@ -467,7 +467,7 @@ class APIClient:
         raise SlideScoreErrorException(f"Expected response code 200. Got {response.status_code}.")
 
     @staticmethod
-    def _get_filename(string: str) -> str:
+    def _get_filename(string: str) -> List[Any]:
         """
         Method to extract the filename from the HTTP header.
         Parameters

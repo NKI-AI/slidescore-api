@@ -484,12 +484,12 @@ class APIClient:
         return filename[0].strip().strip('"')
 
     @staticmethod
-    def _write_to_history(save_dir: pathlib.Path, filename: Union[str, pathlib.Path]) -> None:
+    def _write_to_history(save_dir: pathlib.Path, filename: Union[str, pathlib.Path]):
         with open(save_dir / ".download_history.txt", "a", encoding="utf-8") as file:
             file.write(f"{filename}\n")
 
     @staticmethod
-    def _read_from_history(save_dir: pathlib.Path) -> List[Any]:
+    def _read_from_history(save_dir: pathlib.Path):
         history_filename = save_dir / ".download_history.txt"
         if not history_filename.is_file():
             return []

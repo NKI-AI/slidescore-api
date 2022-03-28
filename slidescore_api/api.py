@@ -10,7 +10,7 @@ import re
 import shutil
 import sys
 import urllib.parse
-from typing import Dict, Iterable, List, Optional, Tuple, Union, Any
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import requests
 from PIL import Image

@@ -480,8 +480,8 @@ class APIClient:
         str
             Filename extracted from HTTP header.
         """
-        filename = re.findall(r"filename\*?=([^;]+)", string, flags=re.IGNORECASE)
-        filename = filename[0].strip().strip('"')
+        filename_list = re.findall(r"filename\*?=([^;]+)", string, flags=re.IGNORECASE)
+        filename: pathlib.Path = pathlib.Path(filename_list[0].strip().strip('"'))
         return filename
 
     @staticmethod

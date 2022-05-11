@@ -46,15 +46,6 @@ def _check_type_error(filter_type: list) -> None:
             raise TypeError(f"Annotation type {f_type} is not supported.")
 
 
-def _save_polygon_as_shapely(annotations, polygon_id, file):
-    if len(annotations.annotation[polygon_id]["points"]) > 0:
-        json.dump(
-            mapping(annotations.annotation[polygon_id]["points"]),
-            file,
-            indent=2,
-        )
-
-
 def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list) -> None:
     """
     Given a single Annotation of a WSI, this function writes them as shapely objects to disc
@@ -74,16 +65,19 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     None
     """
     _check_type_error(filter_type)
-    save_path = save_dir / Path("annotations" + "/" + annotations.author + "/" + annotations.slide_name)
+    save_path = save_dir / "annotations" / annotations.author / annotations.slide_name
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
+        dump_list: list = []
         for polygon_id, _ in enumerate(annotations.annotation):
             # Handles only polygon and brush type annotations.
             if (
-                annotations.annotation[polygon_id]["type"] == AnnotationType.POLYGON
-                or annotations.annotation[polygon_id]["type"] == AnnotationType.BRUSH
+                AnnotationType[annotations.annotation[polygon_id]["type"].upper()] == AnnotationType.POLYGON
+                or AnnotationType[annotations.annotation[polygon_id]["type"].upper()] == AnnotationType.BRUSH
             ):
-                _save_polygon_as_shapely(annotations, polygon_id, file)
+                if len(annotations.annotation[polygon_id]["points"]) > 0:
+                    dump_list.append(mapping(annotations.annotation[polygon_id]["points"]))
+        json.dump(dump_list, file, indent=2)
 
 
 def _parse_brush_annotation(annotations: Dict) -> Dict:
@@ -227,6 +221,8 @@ class SlideScoreAnnotations:
         self.annotations_generated = 0
         self.num_empty = 0
         self.num_entries = 0
+        self._annotated_images = []
+        self._row_iterator = None
 
     def check(self) -> None:
         """
@@ -264,7 +260,8 @@ class SlideScoreAnnotations:
             if self._headers != annotation_file.readline().strip().split("\t"):
                 raise RuntimeError("Header missing.")
             for line in annotation_file:
-                yield line
+                self._row_iterator = line
+                yield self._row_iterator
 
     def _parse_annotation_row(self, row, filter_empty):  # pylint:disable=too-many-branches
         _row = dict(zip(self._headers, row.split("\t")))
@@ -301,6 +298,21 @@ class SlideScoreAnnotations:
                 return None
 
         return _row, data
+
+    @property
+    def annotated_images_list(self) -> list:
+        """
+        Get a list of all annotated images from a given slidescore study
+
+        Returns
+        -------
+        list of all slide names that are annotated in a slidescore study
+        """
+        for line in self.from_iterable(self._row_iterator):
+            self._annotated_images.append(line.slide_name)
+        self.unannotated = 0
+        self.annotations_generated = 0
+        return self._annotated_images
 
     def from_iterable(
         self,

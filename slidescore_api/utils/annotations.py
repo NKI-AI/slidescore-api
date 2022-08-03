@@ -73,18 +73,21 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
-        for polygon_id, _ in enumerate(annotations.annotation):
+        for ann_id, _ in enumerate(annotations.annotation):
             # Handles only polygon and brush type annotations.
             # rects are internally polygons
-            is_polygon = AnnotationType[annotations.annotation[polygon_id]["type"].upper()] in (
+            annotation_type = AnnotationType[annotations.annotation[ann_id]["type"].upper()]
+            is_polygon = annotation_type in (
                 AnnotationType.POLYGON,
                 AnnotationType.BRUSH,
-                AnnotationType.RECT,
+                # AnnotationType.RECT,
             )
-            if is_polygon:
-                is_valid = len(annotations.annotation[polygon_id]["points"]) > 0
-                if is_valid:
-                    dump_list.append(mapping(annotations.annotation[polygon_id]["points"]))
+            points = annotations.annotation[ann_id]["points"]
+            if is_polygon or annotation_type == AnnotationType.POINTS:
+                if len(points) > 0:
+                    dump_list.append(mapping(points))
+            else:
+                raise RuntimeError(f"Annotation type {annotation_type} is not supported.")
 
         json.dump(dump_list, file, indent=2)
 

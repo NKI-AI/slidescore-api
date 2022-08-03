@@ -74,7 +74,6 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
-        is_polygon = None
         for ann_id, _ in enumerate(annotations.annotation):
             # Handles only polygon and brush type annotations.
             # rects are internally polygons
@@ -97,9 +96,11 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
 
         output = []
         for data in dump_list:
-            output += list(data)
+            output += data.geoms
 
-        json.dump(json.loads(gpd.GeoSeries(output).to_json()), file, indent=2)
+        json.dump(
+            json.loads(gpd.GeoDataFrame({"geometry": output, "name": annotations.label}).to_json()), file, indent=2
+        )
 
 
 def _parse_brush_annotation(annotations: Dict) -> Dict:

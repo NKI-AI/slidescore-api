@@ -9,6 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Iterable, NamedTuple, Union
 
+import geopandas as gpd
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping
 
@@ -73,17 +74,17 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
+        is_polygon = None
         for ann_id, _ in enumerate(annotations.annotation):
             # Handles only polygon and brush type annotations.
             # rects are internally polygons
             annotation_type = AnnotationType[annotations.annotation[ann_id]["type"].upper()]
-            is_supported = annotation_type in (
+            is_polygon = annotation_type in (
                 AnnotationType.POLYGON,
                 AnnotationType.BRUSH,
                 AnnotationType.RECT,
-                AnnotationType.POINTS,
             )
-            if not is_supported:
+            if not is_polygon and annotation_type != AnnotationType.POINTS:
                 raise RuntimeError(f"Annotation type {annotation_type} is not supported.")
             points = annotations.annotation[ann_id]["points"]
             if isinstance(points, (Polygon, MultiPolygon)) and points.area == 0:
@@ -91,9 +92,14 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
                     f"Dismissed polygon for {annotations.author} and {annotations.slide_name} because area = 0."
                 )
                 continue
-            dump_list.append(mapping(points))
 
-        json.dump(dump_list, file, indent=2)
+            dump_list.append(points)
+
+        output = []
+        for data in dump_list:
+            output += list(data)
+
+        json.dump(json.loads(gpd.GeoSeries(output).to_json()), file, indent=2)
 
 
 def _parse_brush_annotation(annotations: Dict) -> Dict:

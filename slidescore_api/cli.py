@@ -230,7 +230,6 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     for image in tqdm(images):
         image_id = image["id"]
         annotations = client.get_results(study_id, imageid=image_id, **extra_kwargs)
-
         if LabelOutputType[output_type] == LabelOutputType.JSON:
             _save_label_as_json(save_dir, image_id, image, annotations)
         elif LabelOutputType[output_type] == LabelOutputType.RAW:
@@ -394,9 +393,8 @@ def register_parser(parser: argparse._SubParsersAction):
         help="Type of output",
         type=str,
         choices=LabelOutputType.__members__,
-        default=LabelOutputType.SHAPELY,
+        default="SHAPELY",
     )
-
     download_label_parser.add_argument(
         "ann_type", nargs="*", type=str, help="list of required type of annotations", default=["brush", "polygon"]
     )

@@ -38,11 +38,12 @@ class AnnotationType(Enum):
     ELLIPSE: str = "ellipse"
     BRUSH: str = "brush"
     HEATMAP: str = "heatmap"
+    POINTS: str = "points"
 
 
 def _check_type_error(filter_type: list) -> None:
     for f_type in filter_type:
-        if f_type not in list(AnnotationType.__members__):
+        if f_type.upper() not in list(AnnotationType.__members__):
             raise TypeError(f"Annotation type {f_type} is not supported.")
 
 

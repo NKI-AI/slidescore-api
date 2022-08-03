@@ -3,13 +3,16 @@
 """Utility file containing parsing modules and functions to save slidescore annotations."""
 
 import json
+import logging
 import warnings
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Iterable, NamedTuple, Union
 
 import numpy as np
-from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
+from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping
+
+logger = logging.getLogger(__name__)
 
 
 class ImageAnnotation(NamedTuple):
@@ -66,18 +69,23 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     None
     """
     _check_type_error(filter_type)
-    save_path = save_dir / "annotations" / annotations.author / annotations.slide_name
+    save_path = save_dir / annotations.author / annotations.slide_name
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
         for polygon_id, _ in enumerate(annotations.annotation):
             # Handles only polygon and brush type annotations.
-            if (
-                AnnotationType[annotations.annotation[polygon_id]["type"].upper()] == AnnotationType.POLYGON
-                or AnnotationType[annotations.annotation[polygon_id]["type"].upper()] == AnnotationType.BRUSH
-            ):
-                if len(annotations.annotation[polygon_id]["points"]) > 0:
+            # rects are internally polygons
+            is_polygon = AnnotationType[annotations.annotation[polygon_id]["type"].upper()] in (
+                AnnotationType.POLYGON,
+                AnnotationType.BRUSH,
+                AnnotationType.RECT,
+            )
+            if is_polygon:
+                is_valid = len(annotations.annotation[polygon_id]["points"]) > 0
+                if is_valid:
                     dump_list.append(mapping(annotations.annotation[polygon_id]["points"]))
+
         json.dump(dump_list, file, indent=2)
 
 
@@ -119,7 +127,7 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:
         polygons.append(polygon)
 
     if not len(negative_polygons) == inners_count:
-        warnings.warn(
+        logger.warning(
             f"Not all negative_polygons accounted for: {inners_count} / {len(negative_polygons)}.\n"
             f"Indices :{[nidx for nidx, val in used_negatives.items() if not val]}.\n"
             f"Polygons:"
@@ -150,7 +158,7 @@ def _parse_polygon_annotation(annotations: Dict) -> Dict:
     # returns points: MultiPolygon
     points: Any = np.array([[pt["x"], pt["y"]] for pt in annotations["points"]], dtype=np.float32)
     if len(points) < 3:
-        warnings.warn(f"Invalid polygon: {annotations}")
+        logger.warning(f"Invalid polygon: {annotations}")
         points = []
     else:
         points = MultiPolygon([Polygon(points)])
@@ -185,10 +193,11 @@ def _parse_rect_annotation(annotations: Dict) -> Dict:
     # returns corner: Point, size: Point
     corner = np.array([annotations["corner"]["x"], annotations["corner"]["y"]], dtype=np.float32)
     size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
+    points = box(*corner, *(corner + size), ccw=True)
+
     data = {
         "type": "rect",
-        "corner": Point(corner),
-        "size": Point(size),
+        "points": points,
     }
     return data
 

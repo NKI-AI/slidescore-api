@@ -77,17 +77,21 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
             # Handles only polygon and brush type annotations.
             # rects are internally polygons
             annotation_type = AnnotationType[annotations.annotation[ann_id]["type"].upper()]
-            is_polygon = annotation_type in (
+            is_supported = annotation_type in (
                 AnnotationType.POLYGON,
                 AnnotationType.BRUSH,
-                # AnnotationType.RECT,
+                AnnotationType.RECT,
+                AnnotationType.POINTS,
             )
-            points = annotations.annotation[ann_id]["points"]
-            if is_polygon or annotation_type == AnnotationType.POINTS:
-                if len(points) > 0:
-                    dump_list.append(mapping(points))
-            else:
+            if not is_supported:
                 raise RuntimeError(f"Annotation type {annotation_type} is not supported.")
+            points = annotations.annotation[ann_id]["points"]
+            if isinstance(points, (Polygon, MultiPolygon)) and points.area == 0:
+                logger.warning(
+                    f"Dismissed polygon for {annotations.author} and {annotations.slide_name} because area = 0."
+                )
+                continue
+            dump_list.append(mapping(points))
 
         json.dump(dump_list, file, indent=2)
 
@@ -163,8 +167,8 @@ def _parse_polygon_annotation(annotations: Dict) -> Dict:
     if len(points) < 3:
         logger.warning(f"Invalid polygon: {annotations}")
         points = []
-    else:
-        points = MultiPolygon([Polygon(points)])
+
+    points = MultiPolygon([Polygon(points)])
     data = {
         "type": "polygon",
         "points": points,
@@ -200,7 +204,7 @@ def _parse_rect_annotation(annotations: Dict) -> Dict:
 
     data = {
         "type": "rect",
-        "points": points,
+        "points": MultiPolygon([points]),
     }
     return data
 

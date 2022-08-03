@@ -34,7 +34,7 @@ class LabelOutputType(Enum):
 
     JSON: str = "json"
     RAW: str = "raw"
-    SHAPELY: str = "shapely"
+    GEOJSON: str = "geojson"
 
 
 def parse_api_token(data: Optional[Path] = None) -> str:
@@ -236,7 +236,7 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
             with open(save_dir / "annotations.txt", "a", encoding="utf-8") as file:
                 for annotation in annotations:
                     file.write(annotation.to_row() + "\n")
-        elif LabelOutputType[output_type] == LabelOutputType.SHAPELY:
+        elif LabelOutputType[output_type] == LabelOutputType.GEOJSON:
             annotation_parser = SlideScoreAnnotations()
             row_iterator = _row_iterator(annotations)
 
@@ -390,10 +390,10 @@ def register_parser(parser: argparse._SubParsersAction):
     download_label_parser.add_argument(
         "-o" "--output-type",
         dest="output_type",
-        help="Type of output",
+        help="Type of output. GeoJSON is a compliant GeoJSON output.",
         type=str,
         choices=LabelOutputType.__members__,
-        default="SHAPELY",
+        default="GEOJSON",
     )
     download_label_parser.add_argument(
         "ann_type", nargs="*", type=str, help="list of required type of annotations", default=["brush", "polygon"]

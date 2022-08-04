@@ -9,7 +9,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Iterable, NamedTuple, Union
 
-import geopandas as gpd
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping
 
@@ -51,6 +50,23 @@ def _check_type_error(filter_type: list) -> None:
             raise TypeError(f"Annotation type {f_type} is not supported.")
 
 
+def _to_geojson_format(list_of_points: list, label: str) -> Dict:
+    feature_collection = {"type": "FeatureCollection"}
+    features = []
+    properties = {
+        "object_type": "annotation",
+        "classification": {
+            "name": label,
+            "colorRGB": -65536,
+        },
+    }
+    for data in list_of_points:
+        features.append({"type": "Feature", "geometry": data})
+    feature_collection.update({"features": features})
+    feature_collection.update({"properties": properties})
+    return feature_collection
+
+
 def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list) -> None:
     """
     Given a single Annotation of a WSI, this function writes them as shapely objects to disc
@@ -75,7 +91,6 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
         for ann_id, _ in enumerate(annotations.annotation):
-            # Handles only polygon and brush type annotations.
             # rects are internally polygons
             annotation_type = AnnotationType[annotations.annotation[ann_id]["type"].upper()]
             is_polygon = annotation_type in (
@@ -85,22 +100,16 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
             )
             if not is_polygon and annotation_type != AnnotationType.POINTS:
                 raise RuntimeError(f"Annotation type {annotation_type} is not supported.")
-            points = annotations.annotation[ann_id]["points"]
-            if isinstance(points, (Polygon, MultiPolygon)) and points.area == 0:
+            coords = annotations.annotation[ann_id]["points"]
+            if isinstance(coords, (Polygon, MultiPolygon)) and coords.area == 0:
                 logger.warning(
                     f"Dismissed polygon for {annotations.author} and {annotations.slide_name} because area = 0."
                 )
                 continue
 
-            dump_list.append(points)
-
-        output = []
-        for data in dump_list:
-            output += data.geoms
-
-        json.dump(
-            json.loads(gpd.GeoDataFrame({"geometry": output, "name": annotations.label}).to_json()), file, indent=2
-        )
+            dump_list.append(mapping(coords))
+        feature_collection = _to_geojson_format(dump_list, label=annotations.label)
+        json.dump(feature_collection, file, indent=2)
 
 
 def _parse_brush_annotation(annotations: Dict) -> Dict:

@@ -44,12 +44,6 @@ class AnnotationType(Enum):
     POINTS: str = "points"
 
 
-def _check_type_error(filter_type: list) -> None:
-    for f_type in filter_type:
-        if f_type.upper() not in list(AnnotationType.__members__):
-            raise TypeError(f"Annotation type {f_type} is not supported.")
-
-
 def _to_geojson_format(list_of_points: list, label: str) -> Dict:
     feature_collection = {"type": "FeatureCollection"}
     features = []
@@ -57,13 +51,15 @@ def _to_geojson_format(list_of_points: list, label: str) -> Dict:
         "object_type": "annotation",
         "classification": {
             "name": label,
-            "colorRGB": -65536,
         },
     }
+    idx = 0
     for data in list_of_points:
-        features.append({"type": "Feature", "geometry": data})
+        features.append(
+            {"id": str(idx), "type": "Feature", "properties": properties, "geometry": mapping(data)}
+        )
+        idx += 1
     feature_collection.update({"features": features})
-    feature_collection.update({"properties": properties})
     return feature_collection
 
 
@@ -85,7 +81,6 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     ----------
     None
     """
-    _check_type_error(filter_type)
     save_path = save_dir / annotations.author / annotations.slide_name
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
@@ -107,8 +102,13 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
                 )
                 continue
 
-            dump_list.append(mapping(coords))
-        feature_collection = _to_geojson_format(dump_list, label=annotations.label)
+            dump_list.append(coords)
+
+            output = []
+            for data in dump_list:
+                output += [_ for _ in data.geoms if _.area > 0]
+
+        feature_collection = _to_geojson_format(output, label=annotations.label)
         json.dump(feature_collection, file, indent=2)
 
 

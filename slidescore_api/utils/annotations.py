@@ -193,7 +193,7 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:
             f"Polygons:"
             f"{[list(negative_polygons[idx].exterior.coords) for idx, val in used_negatives.items() if not val]}.\n"
             f"Areas   :{[negative_polygons[nidx].area for nidx, val in used_negatives.items() if not val]}.\n"
-        )  # disable=logging-fstring-interpolation
+        )  # pylint:disable=logging-fstring-interpolation
 
     points = MultiPolygon(polygons)
     data = {

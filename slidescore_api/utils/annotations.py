@@ -7,7 +7,7 @@ import logging
 import warnings
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Iterable, NamedTuple, Union
+from typing import Any, Dict, Iterable, NamedTuple, Union, List
 
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping
@@ -23,6 +23,7 @@ class ImageAnnotation(NamedTuple):
     """
 
     ImageID: str
+    lastModifiedOn: str
     answers: Dict
     slide_name: str
     author: str
@@ -46,7 +47,7 @@ class AnnotationType(Enum):
     POINTS: str = "points"
 
 
-def _to_geojson_format(list_of_points: list, slide_name: str, answers: Dict, label: str) -> Dict:
+def _to_geojson_format(list_of_points: list, lastModifiedOn: str, answers: dict, label: str) -> Dict[str, str]:
     """
     Convert a given list of annotations into the GeoJSON standard.
 
@@ -54,15 +55,13 @@ def _to_geojson_format(list_of_points: list, slide_name: str, answers: Dict, lab
     ----------
     list_of_points: list
         A list containing annotation shapes or coordinates.
-    slide_name: str
-        The slide name
     answers: Dict
         slidescore answers per annotation
     label: str
         The string identifying the annotation class.
     """
-    feature_collection = {"type": "FeatureCollection", "slide_name": slide_name}
-    features = []
+    feature_collection = {"type": "FeatureCollection", "lastModifiedOn": lastModifiedOn}
+    features: List = []
     properties = {
         "object_type": "annotation",
         "classification": {
@@ -72,7 +71,15 @@ def _to_geojson_format(list_of_points: list, slide_name: str, answers: Dict, lab
     idx = 0
     for index, data in enumerate(list_of_points):
         geometry = mapping(data)
-        features.append({"id": str(idx), "type": "Feature", "lastModifiedOn": answers[index]["modifiedOn"], "properties": properties, "geometry": geometry})
+        features.append(
+            {
+                "id": str(idx),
+                "type": "Feature",
+                "ModifiedOn": answers[index]["modifiedOn"],
+                "properties": properties,
+                "geometry": geometry,
+            }
+        )
         idx += 1
     feature_collection.update({"features": features})
     return feature_collection
@@ -93,7 +100,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:
     ----------
     None
     """
-    save_path = save_dir / annotations.author / annotations.ImageID
+    save_path = save_dir / annotations.author / annotations.ImageID / annotations.slide_name
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
@@ -118,9 +125,11 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:
 
             output = []
             for data in dump_list:
-                output += [_ for _ in data.geoms if _.area > 0]
+                output += [entity for entity in data.geoms if entity.area > 0]
 
-        feature_collection = _to_geojson_format(output, slide_name=annotations.slide_name, answers=annotations.answers, label=annotations.label)
+        feature_collection = _to_geojson_format(
+            output, lastModifiedOn=annotations.lastModifiedOn, answers=annotations.answers, label=annotations.label
+        )
         json.dump(feature_collection, file, indent=2)
 
 
@@ -252,7 +261,7 @@ class SlideScoreAnnotations:
     Main class for Slidescore annotation parsing.
     """
 
-    _headers = ["ImageID", "Image Name", "By", "Question", "Answer"]
+    _headers = ["ImageID", "Image Name", "By", "Question", "Answer", "lastModifiedOn"]
     _parse_fns = {
         "brush": _parse_brush_annotation,
         "ellipse": _parse_ellipse_annotation,
@@ -406,6 +415,7 @@ class SlideScoreAnnotations:
             answers = json.loads(_row["Answer"])
             row_annotation = ImageAnnotation(
                 ImageID=_row["ImageID"],
+                lastModifiedOn=_row["lastModifiedOn"],
                 answers=answers,
                 slide_name=_row["Image Name"],
                 author=_row["By"],

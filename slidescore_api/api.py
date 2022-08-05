@@ -465,7 +465,7 @@ class APIClient:
         response = requests.get(
             self.base_url + f"/{str(level)}/{str(x_coord)}_{str(y_coord)}.jpeg",
             stream=True,
-            cookies=dict(t=self.cookie),
+            cookies={"t": self.cookie},
         )
         if response.status_code == 200:
             return Image.open(io.BytesIO(response.content))

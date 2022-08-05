@@ -33,6 +33,7 @@ line_length = 119
 
 [tool.pylint.format]
 max-line-length = "120"
+disable=["logging-fstring-interpolation"]
 
 [tool.pylint.'TYPECHECK']
 generated-members=['numpy.*', 'np.*']

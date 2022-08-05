@@ -384,7 +384,8 @@ def register_parser(parser: argparse._SubParsersAction):
         required=False,
     )
     download_label_parser.add_argument(
-        "-o" "--output-type",
+        "-o",
+        "--output-type",
         dest="output_type",
         help="Type of output. GeoJSON is a compliant GeoJSON output.",
         type=str,

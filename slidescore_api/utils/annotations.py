@@ -101,7 +101,7 @@ def _to_geojson_format(list_of_points: list, last_modified_on: str, answers: dic
     return feature_collection
 
 
-def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:
+def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylint:disable=logging-fstring-interpolation
     """
     Given a single Annotation of a WSI, this function writes them as shapely objects to disc
     Parameters
@@ -149,7 +149,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:
         json.dump(feature_collection, file, indent=2)
 
 
-def _parse_brush_annotation(annotations: Dict) -> Dict:
+def _parse_brush_annotation(annotations: Dict) -> Dict:  # pylint:disable=logging-fstring-interpolation
     """
 
     Parameters
@@ -193,7 +193,7 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:
             f"Polygons:"
             f"{[list(negative_polygons[idx].exterior.coords) for idx, val in used_negatives.items() if not val]}.\n"
             f"Areas   :{[negative_polygons[nidx].area for nidx, val in used_negatives.items() if not val]}.\n"
-        )  # pylint:disable=logging-fstring-interpolation
+        )
 
     points = MultiPolygon(polygons)
     data = {
@@ -203,7 +203,7 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:
     return data
 
 
-def _parse_polygon_annotation(annotations: Dict) -> Dict:
+def _parse_polygon_annotation(annotations: Dict) -> Dict:  # pylint:disable=logging-fstring-interpolation
     """
 
     Parameters
@@ -385,11 +385,11 @@ class SlideScoreAnnotations:
         return self._annotated_images
 
     def from_iterable(
-        self,
-        row_iterator: Iterable,
-        filter_author: str = None,
-        filter_label: str = None,
-        filter_empty=True,
+            self,
+            row_iterator: Iterable,
+            filter_author: str = None,
+            filter_label: str = None,
+            filter_empty=True,
     ) -> Iterable:
         """
         Function to convert slidescore annotations (txt file) to an iterable.

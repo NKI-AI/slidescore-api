@@ -7,12 +7,18 @@ import logging
 import warnings
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Iterable, NamedTuple, Union, List
+from typing import Any, Dict, Iterable, NamedTuple, Union, List, TypedDict
 
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping
 
 logger = logging.getLogger(__name__)
+
+
+class GeoJsonDict(TypedDict):
+    type: str
+    lastModifiedOn: str
+    features: List[Any]
 
 
 class ImageAnnotation(NamedTuple):
@@ -47,7 +53,7 @@ class AnnotationType(Enum):
     POINTS: str = "points"
 
 
-def _to_geojson_format(list_of_points: list, lastModifiedOn: str, answers: dict, label: str) -> Dict[str, str]:
+def _to_geojson_format(list_of_points: list, lastModifiedOn: str, answers: dict, label: str) -> GeoJsonDict:
     """
     Convert a given list of annotations into the GeoJSON standard.
 
@@ -60,9 +66,15 @@ def _to_geojson_format(list_of_points: list, lastModifiedOn: str, answers: dict,
     label: str
         The string identifying the annotation class.
     """
-    feature_collection = {"type": "FeatureCollection", "lastModifiedOn": lastModifiedOn}
-    features: List = []
-    properties = {
+
+    feature_collection: GeoJsonDict = {
+        "type": "FeatureCollection",
+        "lastModifiedOn": lastModifiedOn,
+        "features": [],
+    }
+
+    features: List[Any] = []
+    properties: Dict[str, Union[str, Dict[str, str]]] = {
         "object_type": "annotation",
         "classification": {
             "name": label,
@@ -81,7 +93,7 @@ def _to_geojson_format(list_of_points: list, lastModifiedOn: str, answers: dict,
             }
         )
         idx += 1
-    feature_collection.update({"features": features})
+    feature_collection["features"] = features
     return feature_collection
 
 

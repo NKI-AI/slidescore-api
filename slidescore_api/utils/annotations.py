@@ -45,6 +45,16 @@ class AnnotationType(Enum):
 
 
 def _to_geojson_format(list_of_points: list, label: str) -> Dict:
+    """
+    Convert a given list of annotations into the GeoJSON standard.
+
+    Parameters
+    ----------
+    list_of_points: list
+        A list containing annotation shapes or coordinates.
+    label: str
+        The string identifying the annotation class.
+    """
     feature_collection = {"type": "FeatureCollection"}
     features = []
     properties = {

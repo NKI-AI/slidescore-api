@@ -19,6 +19,7 @@ class GeoJsonDict(TypedDict):
     """
     TypedDict for standard GeoJSON output
     """
+
     type: str
     lastModifiedOn: str
     features: List[Any]

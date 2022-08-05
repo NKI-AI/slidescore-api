@@ -180,7 +180,6 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     study_id: int,
     save_dir: Path,
     output_type: str,
-    ann_type: list,
     email: Optional[str] = None,
     question: Optional[str] = None,
     disable_certificate_check: bool = False,
@@ -201,8 +200,6 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
         Directory to save the labels to.
     output_type: str
         User defined output format in which the annotations need to be saved.
-    ann_type: list
-        User choice for the kind of annotation type that is needed.
     email: str, optional
         The author email/name as registered on SlideScore to download those specific annotations.
     question : str
@@ -243,7 +240,7 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
             for curr_annotation in annotation_parser.from_iterable(
                 row_iterator, filter_author=email, filter_label=question
             ):
-                save_shapely(curr_annotation, save_dir=save_dir, filter_type=ann_type)
+                save_shapely(curr_annotation, save_dir=save_dir)
         else:
             raise RuntimeError(f"Output type {output_type} not supported.")
 
@@ -268,7 +265,6 @@ def _download_labels(args: argparse.Namespace) -> None:
         args.study_id,
         args.output_dir,
         output_type=args.output_type,
-        ann_type=args.ann_type,
         question=args.question,
         email=args.user,
         disable_certificate_check=args.disable_certificate_check,
@@ -394,9 +390,6 @@ def register_parser(parser: argparse._SubParsersAction):
         type=str,
         choices=LabelOutputType.__members__,
         default="GEOJSON",
-    )
-    download_label_parser.add_argument(
-        "ann_type", nargs="*", type=str, help="list of required type of annotations", default=["brush", "polygon"]
     )
     download_label_parser.add_argument(
         "output_dir",

@@ -21,7 +21,7 @@ class ImageAnnotation(NamedTuple):
 
     This class can be instantiated to contain different attributes of a WSI along with its annotations.
     """
-
+    ImageID: int
     slide_name: str
     author: str
     label: str
@@ -65,15 +65,13 @@ def _to_geojson_format(list_of_points: list, label: str) -> Dict:
     }
     idx = 0
     for data in list_of_points:
-        features.append(
-            {"id": str(idx), "type": "Feature", "properties": properties, "geometry": mapping(data)}
-        )
+        features.append({"id": str(idx), "type": "Feature", "properties": properties, "geometry": mapping(data)})
         idx += 1
     feature_collection.update({"features": features})
     return feature_collection
 
 
-def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list) -> None:
+def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:
     """
     Given a single Annotation of a WSI, this function writes them as shapely objects to disc
     Parameters
@@ -84,14 +82,11 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     save_dir: Path
         A Path object pointing to the directory where the shapely objects need to be written.
 
-    filter_type: list
-        List of annotation types that is to be written to disc. members must be enumerated in AnnotationType
-
     Returns
     ----------
     None
     """
-    save_path = save_dir / annotations.author / annotations.slide_name
+    save_path = save_dir / annotations.author / annotations.slide_name #/user-defined-folder/author_name/slidescore_id/annotation_label.json
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
@@ -403,6 +398,7 @@ class SlideScoreAnnotations:
             _row, data = _return
 
             row_annotation = ImageAnnotation(
+                ImageID=_row["ImageID"],
                 slide_name=_row["Image Name"],
                 author=_row["By"],
                 label=_row["Question"],

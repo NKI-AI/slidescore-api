@@ -193,7 +193,7 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:
             f"Polygons:"
             f"{[list(negative_polygons[idx].exterior.coords) for idx, val in used_negatives.items() if not val]}.\n"
             f"Areas   :{[negative_polygons[nidx].area for nidx, val in used_negatives.items() if not val]}.\n"
-        )
+        )  # disable=logging-fstring-interpolation
 
     points = MultiPolygon(polygons)
     data = {
@@ -385,11 +385,11 @@ class SlideScoreAnnotations:
         return self._annotated_images
 
     def from_iterable(
-        self,
-        row_iterator: Iterable,
-        filter_author: str = None,
-        filter_label: str = None,
-        filter_empty=True,
+            self,
+            row_iterator: Iterable,
+            filter_author: str = None,
+            filter_label: str = None,
+            filter_empty=True,
     ) -> Iterable:
         """
         Function to convert slidescore annotations (txt file) to an iterable.

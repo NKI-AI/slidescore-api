@@ -7,7 +7,7 @@ import logging
 import warnings
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Iterable, NamedTuple, Union, List, TypedDict
+from typing import Any, Dict, Iterable, List, NamedTuple, TypedDict, Union
 
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping

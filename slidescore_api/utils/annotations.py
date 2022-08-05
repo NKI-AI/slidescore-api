@@ -44,7 +44,7 @@ class AnnotationType(Enum):
     POINTS: str = "points"
 
 
-def _to_geojson_format(list_of_points: list, label: str) -> Dict:
+def _to_geojson_format(list_of_points: list, slide_name: str, label: str) -> Dict:
     """
     Convert a given list of annotations into the GeoJSON standard.
 
@@ -52,10 +52,12 @@ def _to_geojson_format(list_of_points: list, label: str) -> Dict:
     ----------
     list_of_points: list
         A list containing annotation shapes or coordinates.
+    slide_name: str
+        The slide name
     label: str
         The string identifying the annotation class.
     """
-    feature_collection = {"type": "FeatureCollection"}
+    feature_collection = {"type": "FeatureCollection", "slide_name": slide_name}
     features = []
     properties = {
         "object_type": "annotation",
@@ -86,7 +88,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:
     ----------
     None
     """
-    save_path = save_dir / annotations.author / annotations.slide_name #/user-defined-folder/author_name/slidescore_id/annotation_label.json
+    save_path = save_dir / annotations.author / annotations.ImageID
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
@@ -113,7 +115,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:
             for data in dump_list:
                 output += [_ for _ in data.geoms if _.area > 0]
 
-        feature_collection = _to_geojson_format(output, label=annotations.label)
+        feature_collection = _to_geojson_format(output, slide_name=annotations.slide_name, label=annotations.label)
         json.dump(feature_collection, file, indent=2)
 
 

@@ -461,11 +461,11 @@ class APIClient:
         """
         if self.base_url is None:
             raise RuntimeError
-
+        cookies: dict = {"t": self.cookie}
         response = requests.get(
             self.base_url + f"/{str(level)}/{str(x_coord)}_{str(y_coord)}.jpeg",
             stream=True,
-            cookies={"t": self.cookie},
+            cookies=cookies,
         )
         if response.status_code == 200:
             return Image.open(io.BytesIO(response.content))

@@ -3,13 +3,26 @@
 """Utility file containing parsing modules and functions to save slidescore annotations."""
 
 import json
+import logging
 import warnings
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Iterable, NamedTuple, Union
+from typing import Any, Dict, Iterable, List, NamedTuple, TypedDict, Union
 
 import numpy as np
-from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, mapping
+from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping
+
+logger = logging.getLogger(__name__)
+
+
+class GeoJsonDict(TypedDict):
+    """
+    TypedDict for standard GeoJSON output
+    """
+
+    type: str
+    lastModifiedOn: str
+    features: List[Any]
 
 
 class ImageAnnotation(NamedTuple):
@@ -19,6 +32,9 @@ class ImageAnnotation(NamedTuple):
     This class can be instantiated to contain different attributes of a WSI along with its annotations.
     """
 
+    ImageID: str
+    lastModifiedOn: str
+    answers: Dict
     slide_name: str
     author: str
     label: str
@@ -41,13 +57,51 @@ class AnnotationType(Enum):
     POINTS: str = "points"
 
 
-def _check_type_error(filter_type: list) -> None:
-    for f_type in filter_type:
-        if f_type.upper() not in list(AnnotationType.__members__):
-            raise TypeError(f"Annotation type {f_type} is not supported.")
+def _to_geojson_format(list_of_points: list, last_modified_on: str, answers: dict, label: str) -> GeoJsonDict:
+    """
+    Convert a given list of annotations into the GeoJSON standard.
+
+    Parameters
+    ----------
+    list_of_points: list
+        A list containing annotation shapes or coordinates.
+    answers: Dict
+        slidescore answers per annotation
+    label: str
+        The string identifying the annotation class.
+    """
+
+    feature_collection: GeoJsonDict = {
+        "type": "FeatureCollection",
+        "lastModifiedOn": last_modified_on,
+        "features": [],
+    }
+
+    features: List[Any] = []
+    properties: Dict[str, Union[str, Dict[str, str]]] = {
+        "object_type": "annotation",
+        "classification": {
+            "name": label,
+        },
+    }
+    idx = 0
+    for index, data in enumerate(list_of_points):
+        geometry = mapping(data)
+        features.append(
+            {
+                "id": str(idx),
+                "type": "Feature",
+                "ModifiedOn": answers[index]["modifiedOn"],
+                "properties": properties,
+                "geometry": geometry,
+            }
+        )
+        idx += 1
+    feature_collection["features"] = features
+    return feature_collection
 
 
-def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list) -> None:
+def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylint:disable=logging-fstring-interpolation
     """
     Given a single Annotation of a WSI, this function writes them as shapely objects to disc
     Parameters
@@ -58,30 +112,44 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path, filter_type: list
     save_dir: Path
         A Path object pointing to the directory where the shapely objects need to be written.
 
-    filter_type: list
-        List of annotation types that is to be written to disc. members must be enumerated in AnnotationType
-
     Returns
     ----------
     None
     """
-    _check_type_error(filter_type)
-    save_path = save_dir / "annotations" / annotations.author / annotations.slide_name
+    save_path = save_dir / annotations.author / annotations.ImageID
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
-        for polygon_id, _ in enumerate(annotations.annotation):
-            # Handles only polygon and brush type annotations.
-            if (
-                AnnotationType[annotations.annotation[polygon_id]["type"].upper()] == AnnotationType.POLYGON
-                or AnnotationType[annotations.annotation[polygon_id]["type"].upper()] == AnnotationType.BRUSH
-            ):
-                if len(annotations.annotation[polygon_id]["points"]) > 0:
-                    dump_list.append(mapping(annotations.annotation[polygon_id]["points"]))
-        json.dump(dump_list, file, indent=2)
+        for ann_id, _ in enumerate(annotations.annotation):
+            # rects are internally polygons
+            annotation_type = AnnotationType[annotations.annotation[ann_id]["type"].upper()]
+            is_polygon = annotation_type in (
+                AnnotationType.POLYGON,
+                AnnotationType.BRUSH,
+                AnnotationType.RECT,
+            )
+            if not is_polygon and annotation_type != AnnotationType.POINTS:
+                raise RuntimeError(f"Annotation type {annotation_type} is not supported.")
+            coords = annotations.annotation[ann_id]["points"]
+            if isinstance(coords, (Polygon, MultiPolygon)) and coords.area == 0:
+                logger.warning(
+                    f"Dismissed polygon for {annotations.author} and {annotations.slide_name} because area = 0."
+                )
+                continue
+
+            dump_list.append(coords)
+
+            output = []
+            for data in dump_list:
+                output += [entity for entity in data.geoms if entity.area > 0]
+
+        feature_collection = _to_geojson_format(
+            output, last_modified_on=annotations.lastModifiedOn, answers=annotations.answers, label=annotations.label
+        )
+        json.dump(feature_collection, file, indent=2)
 
 
-def _parse_brush_annotation(annotations: Dict) -> Dict:
+def _parse_brush_annotation(annotations: Dict) -> Dict:  # pylint:disable=logging-fstring-interpolation
     """
 
     Parameters
@@ -119,7 +187,7 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:
         polygons.append(polygon)
 
     if not len(negative_polygons) == inners_count:
-        warnings.warn(
+        logger.warning(
             f"Not all negative_polygons accounted for: {inners_count} / {len(negative_polygons)}.\n"
             f"Indices :{[nidx for nidx, val in used_negatives.items() if not val]}.\n"
             f"Polygons:"
@@ -135,7 +203,7 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:
     return data
 
 
-def _parse_polygon_annotation(annotations: Dict) -> Dict:
+def _parse_polygon_annotation(annotations: Dict) -> Dict:  # pylint:disable=logging-fstring-interpolation
     """
 
     Parameters
@@ -150,10 +218,10 @@ def _parse_polygon_annotation(annotations: Dict) -> Dict:
     # returns points: MultiPolygon
     points: Any = np.array([[pt["x"], pt["y"]] for pt in annotations["points"]], dtype=np.float32)
     if len(points) < 3:
-        warnings.warn(f"Invalid polygon: {annotations}")
+        logger.warning(f"Invalid polygon: {annotations}")
         points = []
-    else:
-        points = MultiPolygon([Polygon(points)])
+
+    points = MultiPolygon([Polygon(points)])
     data = {
         "type": "polygon",
         "points": points,
@@ -185,10 +253,11 @@ def _parse_rect_annotation(annotations: Dict) -> Dict:
     # returns corner: Point, size: Point
     corner = np.array([annotations["corner"]["x"], annotations["corner"]["y"]], dtype=np.float32)
     size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
+    points = box(*corner, *(corner + size), ccw=True)
+
     data = {
         "type": "rect",
-        "corner": Point(corner),
-        "size": Point(size),
+        "points": MultiPolygon([points]),
     }
     return data
 
@@ -208,7 +277,7 @@ class SlideScoreAnnotations:
     Main class for Slidescore annotation parsing.
     """
 
-    _headers = ["ImageID", "Image Name", "By", "Question", "Answer"]
+    _headers = ["ImageID", "Image Name", "By", "Question", "Answer", "lastModifiedOn"]
     _parse_fns = {
         "brush": _parse_brush_annotation,
         "ellipse": _parse_ellipse_annotation,
@@ -359,8 +428,11 @@ class SlideScoreAnnotations:
                 self.num_empty += 1
                 continue
             _row, data = _return
-
+            answers = json.loads(_row["Answer"])
             row_annotation = ImageAnnotation(
+                ImageID=_row["ImageID"],
+                lastModifiedOn=_row["lastModifiedOn"],
+                answers=answers,
                 slide_name=_row["Image Name"],
                 author=_row["By"],
                 label=_row["Question"],

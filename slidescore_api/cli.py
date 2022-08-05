@@ -34,7 +34,7 @@ class LabelOutputType(Enum):
 
     JSON: str = "json"
     RAW: str = "raw"
-    SHAPELY: str = "shapely"
+    GEOJSON: str = "geojson"
 
 
 def parse_api_token(data: Optional[Path] = None) -> str:
@@ -180,7 +180,6 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     study_id: int,
     save_dir: Path,
     output_type: str,
-    ann_type: list,
     email: Optional[str] = None,
     question: Optional[str] = None,
     disable_certificate_check: bool = False,
@@ -201,8 +200,6 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
         Directory to save the labels to.
     output_type: str
         User defined output format in which the annotations need to be saved.
-    ann_type: list
-        User choice for the kind of annotation type that is needed.
     email: str, optional
         The author email/name as registered on SlideScore to download those specific annotations.
     question : str
@@ -236,14 +233,14 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
             with open(save_dir / "annotations.txt", "a", encoding="utf-8") as file:
                 for annotation in annotations:
                     file.write(annotation.to_row() + "\n")
-        elif LabelOutputType[output_type] == LabelOutputType.SHAPELY:
+        elif LabelOutputType[output_type] == LabelOutputType.GEOJSON:
             annotation_parser = SlideScoreAnnotations()
             row_iterator = _row_iterator(annotations)
 
             for curr_annotation in annotation_parser.from_iterable(
                 row_iterator, filter_author=email, filter_label=question
             ):
-                save_shapely(curr_annotation, save_dir=save_dir, filter_type=ann_type)
+                save_shapely(curr_annotation, save_dir=save_dir)
         else:
             raise RuntimeError(f"Output type {output_type} not supported.")
 
@@ -268,7 +265,6 @@ def _download_labels(args: argparse.Namespace) -> None:
         args.study_id,
         args.output_dir,
         output_type=args.output_type,
-        ann_type=args.ann_type,
         question=args.question,
         email=args.user,
         disable_certificate_check=args.disable_certificate_check,
@@ -388,15 +384,13 @@ def register_parser(parser: argparse._SubParsersAction):
         required=False,
     )
     download_label_parser.add_argument(
-        "-o" "--output-type",
+        "-o",
+        "--output-type",
         dest="output_type",
-        help="Type of output",
+        help="Type of output. GeoJSON is a compliant GeoJSON output.",
         type=str,
         choices=LabelOutputType.__members__,
-        default="SHAPELY",
-    )
-    download_label_parser.add_argument(
-        "ann_type", nargs="*", type=str, help="list of required type of annotations", default=["brush", "polygon"]
+        default="GEOJSON",
     )
     download_label_parser.add_argument(
         "output_dir",

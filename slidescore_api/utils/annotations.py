@@ -112,7 +112,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:
     ----------
     None
     """
-    save_path = save_dir / annotations.author / annotations.ImageID / annotations.slide_name
+    save_path = save_dir / annotations.author / annotations.ImageID
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []

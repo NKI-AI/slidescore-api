@@ -85,13 +85,16 @@ def _to_geojson_format(list_of_points: list, last_modified_on: str, answers: dic
         },
     }
     idx = 0
+    modified_on = "NA"
     for index, data in enumerate(list_of_points):
+        if data.type != "Point":
+            modified_on = answers[index]["modifiedOn"]
         geometry = mapping(data)
         features.append(
             {
                 "id": str(idx),
                 "type": "Feature",
-                "ModifiedOn": answers[index]["modifiedOn"],
+                "ModifiedOn": modified_on,
                 "properties": properties,
                 "geometry": geometry,
             }
@@ -141,7 +144,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
 
             output = []
             for data in dump_list:
-                output += [entity for entity in data.geoms if entity.area > 0]
+                output += data.geoms
 
         feature_collection = _to_geojson_format(
             output, last_modified_on=annotations.lastModifiedOn, answers=annotations.answers, label=annotations.label

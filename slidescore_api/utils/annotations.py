@@ -21,7 +21,9 @@ class ImageAnnotation(NamedTuple):
 
     This class can be instantiated to contain different attributes of a WSI along with its annotations.
     """
-    ImageID: int
+
+    ImageID: str
+    answers: Dict
     slide_name: str
     author: str
     label: str
@@ -44,7 +46,7 @@ class AnnotationType(Enum):
     POINTS: str = "points"
 
 
-def _to_geojson_format(list_of_points: list, slide_name: str, label: str) -> Dict:
+def _to_geojson_format(list_of_points: list, slide_name: str, answers: Dict, label: str) -> Dict:
     """
     Convert a given list of annotations into the GeoJSON standard.
 
@@ -54,6 +56,8 @@ def _to_geojson_format(list_of_points: list, slide_name: str, label: str) -> Dic
         A list containing annotation shapes or coordinates.
     slide_name: str
         The slide name
+    answers: Dict
+        slidescore answers per annotation
     label: str
         The string identifying the annotation class.
     """
@@ -66,8 +70,9 @@ def _to_geojson_format(list_of_points: list, slide_name: str, label: str) -> Dic
         },
     }
     idx = 0
-    for data in list_of_points:
-        features.append({"id": str(idx), "type": "Feature", "properties": properties, "geometry": mapping(data)})
+    for index, data in enumerate(list_of_points):
+        geometry = mapping(data)
+        features.append({"id": str(idx), "type": "Feature", "lastModifiedOn": answers[index]["modifiedOn"], "properties": properties, "geometry": geometry})
         idx += 1
     feature_collection.update({"features": features})
     return feature_collection
@@ -115,7 +120,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:
             for data in dump_list:
                 output += [_ for _ in data.geoms if _.area > 0]
 
-        feature_collection = _to_geojson_format(output, slide_name=annotations.slide_name, label=annotations.label)
+        feature_collection = _to_geojson_format(output, slide_name=annotations.slide_name, answers=annotations.answers, label=annotations.label)
         json.dump(feature_collection, file, indent=2)
 
 
@@ -398,9 +403,10 @@ class SlideScoreAnnotations:
                 self.num_empty += 1
                 continue
             _row, data = _return
-
+            answers = json.loads(_row["Answer"])
             row_annotation = ImageAnnotation(
                 ImageID=_row["ImageID"],
+                answers=answers,
                 slide_name=_row["Image Name"],
                 author=_row["By"],
                 label=_row["Question"],

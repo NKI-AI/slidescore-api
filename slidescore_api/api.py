@@ -14,6 +14,7 @@ from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import requests
 from PIL import Image
+from PIL.Image import Image
 from requests import Response
 from tqdm import tqdm
 

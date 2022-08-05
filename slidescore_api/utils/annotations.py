@@ -385,11 +385,11 @@ class SlideScoreAnnotations:
         return self._annotated_images
 
     def from_iterable(
-            self,
-            row_iterator: Iterable,
-            filter_author: str = None,
-            filter_label: str = None,
-            filter_empty=True,
+        self,
+        row_iterator: Iterable,
+        filter_author: str = None,
+        filter_label: str = None,
+        filter_empty=True,
     ) -> Iterable:
         """
         Function to convert slidescore annotations (txt file) to an iterable.

@@ -53,7 +53,7 @@ class AnnotationType(Enum):
     POINTS: str = "points"
 
 
-def _to_geojson_format(list_of_points: list, lastModifiedOn: str, answers: dict, label: str) -> GeoJsonDict:
+def _to_geojson_format(list_of_points: list, last_modified_on: str, answers: dict, label: str) -> GeoJsonDict:
     """
     Convert a given list of annotations into the GeoJSON standard.
 
@@ -69,7 +69,7 @@ def _to_geojson_format(list_of_points: list, lastModifiedOn: str, answers: dict,
 
     feature_collection: GeoJsonDict = {
         "type": "FeatureCollection",
-        "lastModifiedOn": lastModifiedOn,
+        "lastModifiedOn": last_modified_on,
         "features": [],
     }
 
@@ -140,7 +140,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:
                 output += [entity for entity in data.geoms if entity.area > 0]
 
         feature_collection = _to_geojson_format(
-            output, lastModifiedOn=annotations.lastModifiedOn, answers=annotations.answers, label=annotations.label
+            output, last_modified_on=annotations.lastModifiedOn, answers=annotations.answers, label=annotations.label
         )
         json.dump(feature_collection, file, indent=2)
 

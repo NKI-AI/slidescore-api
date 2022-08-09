@@ -12,12 +12,13 @@ import logging
 import os
 import pathlib
 import sys
+from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 from typing import Iterable, Optional
+
 import shapely.geometry
 from tqdm import tqdm
-from collections import defaultdict
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client
 from slidescore_api.logging import build_cli_logger
@@ -128,12 +129,13 @@ def _upload_labels_from_geojson(args: argparse.Namespace) -> None:
                 "imageName": args.image_name,
                 "user": args.user,
                 "question": question,
-                "answer": str(answers[question]).replace("\'", "\""),
+                "answer": str(answers[question]).replace("'", '"'),
             }
         )
         wsi_results.append(wsi_result)
 
     client.upload_results(study_id, wsi_results)
+
 
 def _upload_labels_from_csv(args: argparse.Namespace) -> None:
     """Main function that uploads labels to SlideScore.

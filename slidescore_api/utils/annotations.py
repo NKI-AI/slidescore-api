@@ -84,20 +84,21 @@ def _to_geojson_format(list_of_points: list, last_modified_on: str, answers: dic
             "name": label,
         },
     }
-    modified_on = "NA"
+    modified_on = None
     for index, data in enumerate(list_of_points):
         if data.type != "Point":
-            modified_on = answers[index].get("modifiedOn", "NA")
+            modified_on = answers[index].get("modifiedOn", None)
         geometry = mapping(data)
         features.append(
             {
                 "id": str(index),
                 "type": "Feature",
-                "ModifiedOn": modified_on,
                 "properties": properties,
                 "geometry": geometry,
             }
         )
+        if modified_on:
+            features[-1]["modifiedOn"] = modified_on
     feature_collection["features"] = features
     return feature_collection
 

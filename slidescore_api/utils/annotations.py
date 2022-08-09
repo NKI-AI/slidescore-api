@@ -433,7 +433,7 @@ class SlideScoreAnnotations:
             answers = json.loads(_row["Answer"])
             row_annotation = ImageAnnotation(
                 ImageID=_row["ImageID"],
-                lastModifiedOn=_row["lastModifiedOn"],
+                lastModifiedOn=_row.get("lastModifiedOn", "NA"),
                 answers=answers,
                 slide_name=_row["Image Name"],
                 author=_row["By"],

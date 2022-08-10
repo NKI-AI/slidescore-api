@@ -72,9 +72,12 @@ def parse_api_token(data: Optional[Path] = None) -> str:
 def _shapely_to_slidescore(shapely_object):
     shapely_type = type(shapely_object)
     if shapely_type == shapely.geometry.Polygon:
-        assert shapely_object.interiors.__len__() == 0
+        if shapely_object.interiors.__len__() != 0:
+            if any([_.area > 0 for _ in shapely_object.interiors]):
+                raise RuntimeError(f"Expected Polygon to have empty interior. Got {list(shapely_object.interiors)}.")
         coordinates = shapely_object.exterior.coords
-        assert len(coordinates) >= 3
+        if len(coordinates) < 3:
+            raise RuntimeError(f"Malformed Polygon. Got {coordinates}.")
         answer = [{"x": int(x), "y": int(y)} for x, y in coordinates]
         output = [{"type": "polygon", "points": answer}]
 

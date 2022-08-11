@@ -405,6 +405,22 @@ class APIClient:
             raise RuntimeError("Incomplete XML ASAP output.")
         return rawresp
 
+    def get_questions(self, study_id: int) -> str:
+        """Get questions belonging to study."""
+        response = self.perform_request(
+            "Questions", {"studyid": study_id})
+        rjson = response.json()
+
+        json_values = ["AnnoShapes", "AnnoMeasure", "AnnoPoints"]
+
+        # This doesn't seem to return a success value.
+        for line in rjson:
+            print(line)
+        # rawresp = response.text
+        # if rawresp[0] != "<":
+        #     raise RuntimeError("Incomplete XML ASAP output.")
+        # return rawresp
+
     def get_image_server_url(self, image_id: int) -> Tuple[str, str]:
         """
         Returns the image server slidescore url for given image.

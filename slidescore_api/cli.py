@@ -298,6 +298,9 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     if question is not None:
         extra_kwargs["question"] = question
 
+    # First get the questions
+    questions = client.get_questions(study_id)
+
     images = client.get_images(study_id)
 
     for image in tqdm(images):

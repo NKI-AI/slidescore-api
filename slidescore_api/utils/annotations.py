@@ -11,6 +11,7 @@ from typing import Any, Dict, Iterable, List, NamedTuple, TypedDict, Union
 
 import numpy as np
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping
+import shapely.errors
 
 logger = logging.getLogger(__name__)
 
@@ -338,37 +339,45 @@ class SlideScoreAnnotations:
     def _parse_annotation_row(self, row, filter_empty):  # pylint:disable=too-many-branches
         _row = dict(zip(self._headers, row.split("\t")))
         data = {}
+
         try:
             ann = json.loads(_row["Answer"])
-            if len(ann) > 0:
-                # Points dont have type, only x,y; so we use that to distinguish task
-                # Code can be shortened, but is more readable this way
-                if "type" in ann[0]:
-                    label_type = "segmentation"
-                else:
-                    label_type = "detection"
-
-                # Segmentation - Treat brush, polygon as MultiPolygon
-                if label_type == "segmentation":
-                    for idx, _ann in enumerate(ann):
-                        data[idx] = self._parse_fns[_ann["type"]](_ann)
-
-                # Detection - Treat points as MultiPoint
-                elif label_type == "detection":
-                    data[0] = self._parse_fns["points"](ann)
-
-                else:
-                    raise NotImplementedError(f"label_type ( {label_type} ) not implemented.")
-
-            elif filter_empty:
-                return None
-
         except json.decoder.JSONDecodeError:
             if len(_row["Answer"]) > 0:
                 data = {0: {"type": "comment", "text": _row["Answer"]}}
+                return _row, data
             elif filter_empty:
                 return None
 
+        if isinstance(ann, int):
+            data = {0: {"type": "comment", "text": _row["Answer"]}}
+            return _row, data
+        if len(ann) > 0:
+
+            # Points dont have type, only x,y; so we use that to distinguish task
+            # Code can be shortened, but is more readable this way
+            if "type" in ann[0]:
+                label_type = "segmentation"
+            else:
+                label_type = "detection"
+
+            # Segmentation - Treat brush, polygon as MultiPolygon
+            if label_type == "segmentation":
+                for idx, _ann in enumerate(ann):
+                    try:
+                        data[idx] = self._parse_fns[_ann["type"]](_ann)
+                    except shapely.errors.GEOSException:
+                        return None
+
+            # Detection - Treat points as MultiPoint
+            elif label_type == "detection":
+                data[0] = self._parse_fns["points"](ann)
+
+            else:
+                raise NotImplementedError(f"label_type ( {label_type} ) not implemented.")
+
+        elif filter_empty:
+            return None
         return _row, data
 
     @property

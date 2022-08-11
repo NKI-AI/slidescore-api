@@ -120,7 +120,7 @@ def _upload_labels_from_geojson(args: argparse.Namespace) -> None:
     client = APIClient(url, api_token)
     wsi_results = []
 
-    answers = defaultdict(list)
+    answers = defaultdict(list)  # type: ignore
     with open(args.geojson_file, "r", encoding="utf-8") as geo_json_file:
         data = json.load(geo_json_file)["features"]
         for row in data:

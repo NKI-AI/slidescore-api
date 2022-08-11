@@ -34,7 +34,6 @@ class ImageAnnotation(NamedTuple):
 
     ImageID: str
     lastModifiedOn: str
-    answers: Dict
     slide_name: str
     author: str
     label: str
@@ -57,7 +56,7 @@ class AnnotationType(Enum):
     POINTS: str = "points"
 
 
-def _to_geojson_format(list_of_points: list, last_modified_on: str, answers: dict, label: str) -> GeoJsonDict:
+def _to_geojson_format(list_of_points: list, last_modified_on: str, label: str) -> GeoJsonDict:
     """
     Convert a given list of annotations into the GeoJSON standard.
 
@@ -65,8 +64,6 @@ def _to_geojson_format(list_of_points: list, last_modified_on: str, answers: dic
     ----------
     list_of_points: list
         A list containing annotation shapes or coordinates.
-    answers: Dict
-        slidescore answers per annotation
     label: str
         The string identifying the annotation class.
     """
@@ -84,16 +81,12 @@ def _to_geojson_format(list_of_points: list, last_modified_on: str, answers: dic
             "name": label,
         },
     }
-    modified_on = "NA"
     for index, data in enumerate(list_of_points):
-        if data.type != "Point":
-            modified_on = answers[index]["modifiedOn"]
         geometry = mapping(data)
         features.append(
             {
                 "id": str(index),
                 "type": "Feature",
-                "ModifiedOn": modified_on,
                 "properties": properties,
                 "geometry": geometry,
             }
@@ -145,7 +138,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
                 output += data.geoms
 
         feature_collection = _to_geojson_format(
-            output, last_modified_on=annotations.lastModifiedOn, answers=annotations.answers, label=annotations.label
+            output, last_modified_on=annotations.lastModifiedOn, label=annotations.label
         )
         json.dump(feature_collection, file, indent=2)
 
@@ -429,11 +422,9 @@ class SlideScoreAnnotations:
                 self.num_empty += 1
                 continue
             _row, data = _return
-            answers = json.loads(_row["Answer"])
             row_annotation = ImageAnnotation(
                 ImageID=_row["ImageID"],
-                lastModifiedOn=_row["lastModifiedOn"],
-                answers=answers,
+                lastModifiedOn=_row.get("lastModifiedOn", None),
                 slide_name=_row["Image Name"],
                 author=_row["By"],
                 label=_row["Question"],

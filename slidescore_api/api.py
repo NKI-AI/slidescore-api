@@ -75,7 +75,7 @@ class SlideScoreResult:
         self.tma_sample_id = slide_dict["tmaSampleID"] if "tmaSampleID" in slide_dict else ""
         self.question = slide_dict["question"]
         self.answer = slide_dict["answer"]
-        self.last_modified_on = slide_dict["lastModifiedOn"]
+        self.last_modified_on = slide_dict["lastModifiedOn"] if "lastModifiedOn" in slide_dict else ""
 
         self.points = None
         if self.answer is not None and self.answer[:2] == "[{":
@@ -100,7 +100,7 @@ class SlideScoreResult:
         ret = str(self.image_id) + "\t" + self.image_name + "\t" + self.user + "\t"
         if self.tma_row is not None:
             ret = ret + str(self.tma_row) + "\t" + str(self.tma_col) + "\t" + self.tma_sample_id + "\t"
-        ret = ret + self.question + "\t" + self.answer + "\t" + self.last_modified_on
+        ret = ret + self.question + "\t" + str(self.answer)  # + "\t"#  + self.last_modified_on
         return ret
 
     def __repr__(self):

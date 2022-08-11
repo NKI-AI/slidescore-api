@@ -12,10 +12,12 @@ import logging
 import os
 import pathlib
 import sys
+from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 from typing import Iterable, Optional
 
+import shapely.geometry
 from tqdm import tqdm
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client
@@ -67,7 +69,81 @@ def parse_api_token(data: Optional[Path] = None) -> str:
     return api_token
 
 
-def _upload_labels(args: argparse.Namespace) -> None:
+def _shapely_to_slidescore(shapely_object):
+    shapely_type = type(shapely_object)
+    if shapely_type == shapely.geometry.Polygon:
+        if shapely_object.interiors.__len__() != 0:
+            if any([_.area > 0 for _ in shapely_object.interiors]):
+                raise RuntimeError(f"Expected Polygon to have empty interior. Got {list(shapely_object.interiors)}.")
+
+        coordinates = shapely_object.exterior.coords
+        if len(coordinates) < 3:
+            raise RuntimeError(f"Malformed Polygon. Got {coordinates}.")
+        answer = [{"x": int(x), "y": int(y)} for x, y in coordinates]
+        output = [{"type": "polygon", "points": answer}]
+
+    elif shapely_type == shapely.geometry.Point:
+        raise NotImplementedError
+        # Output is of the following form
+        # output = {"x": int(x), "y": int(y)}
+
+    else:
+        raise NotImplementedError
+
+    # THis can be useful for boxes
+    # x0, y0, x1, y1 = curr_shape.bounds
+    # h = x1 - x0
+    # w = y1 - y0
+    # output = {
+    #     "type": "rect",
+    #     "corner": {"x": int(x0), "y": int(y0)},
+    #     "size": {"x": int(h), "y": int(w)},
+    # }
+    return output
+
+
+def _upload_labels_from_geojson(args: argparse.Namespace) -> None:
+    """Main function that uploads geojson labels to SlideScore.
+
+    Parameters
+    ----------
+    args: argparse.Namespace
+        The arguments passed from the CLI. Run with `-h` to see the required parameters
+
+    Returns
+    -------
+    None
+    """
+    url = args.slidescore_url
+    api_token = parse_api_token(args.token_path)
+    study_id = args.study_id
+    client = APIClient(url, api_token)
+    wsi_results = []
+
+    answers = defaultdict(list)  # type: ignore
+    with open(args.geojson_file, "r", encoding="utf-8") as geo_json_file:
+        data = json.load(geo_json_file)["features"]
+        for row in data:
+            shapely_object = shapely.geometry.shape(row["geometry"])
+            answer = _shapely_to_slidescore(shapely_object)
+            answers[row["properties"]["classification"]["name"]] += answer
+
+    for question in answers:
+        wsi_result = SlideScoreResult(
+            {
+                "imageID": args.image_id,
+                "imageName": args.image_name,
+                "user": args.user,
+                "question": question,
+                "answer": str(answers[question]).replace("'", '"'),
+            }
+        )
+        wsi_results.append(wsi_result)
+
+    client.upload_results(study_id, wsi_results)
+
+
+def _upload_labels_from_csv(args: argparse.Namespace) -> None:
     """Main function that uploads labels to SlideScore.
 
     Parameters
@@ -399,14 +475,14 @@ def register_parser(parser: argparse._SubParsersAction):
     )
     download_label_parser.set_defaults(subcommand=_download_labels)
 
-    upload_label_parser = parser.add_parser("upload-labels", help="Upload labels to SlideScore.")
-    upload_label_parser.add_argument(
+    upload_csv_parser = parser.add_parser("upload-labels-from-csv", help="Upload labels to SlideScore.")
+    upload_csv_parser.add_argument(
         "--csv-delimiter",
         type=str,
         help="The delimiter character used in the csv file.",
         default="\t",
     )
-    upload_label_parser.add_argument(
+    upload_csv_parser.add_argument(
         "-u",
         "--user",
         dest="user",
@@ -415,13 +491,13 @@ def register_parser(parser: argparse._SubParsersAction):
         type=str,
         required=False,
     )
-    upload_label_parser.add_argument(
+    upload_csv_parser.add_argument(
         "--csv-fieldnames",
         nargs="*",
         type=str,
         default=["imageID", "imageName", "user", "question", "answer"],
     )
-    upload_label_parser.add_argument(
+    upload_csv_parser.add_argument(
         "-r",
         "--results-file",
         type=str,
@@ -433,7 +509,40 @@ def register_parser(parser: argparse._SubParsersAction):
         "pertains to the upload and answer contains a list of annotations (e.g.: ellipse, rectangle, polygon) "
         "to be uploaded to SlideScore. See the documentation for some examples.",
     )
-    upload_label_parser.set_defaults(subcommand=_upload_labels)
+    upload_csv_parser.set_defaults(subcommand=_upload_labels_from_csv)
+
+    upload_json_parser = parser.add_parser("upload-labels-from-geojson", help="Upload labels to SlideScore.")
+    upload_json_parser.add_argument(
+        "-u",
+        "--user",
+        dest="user",
+        help="Email(-like) reference indicating submitted annotations on SlideScore. "
+        "If not set, will use the one included in the results file.",
+        type=str,
+        required=True,
+    )
+    upload_json_parser.add_argument(
+        "-i",
+        "--image-id",
+        type=str,
+        required=True,
+        help="SlideScore Image ID",
+    )
+    upload_json_parser.add_argument(
+        "-n",
+        "--image-name",
+        type=str,
+        required=True,
+        help="SlideScore Image Name",
+    )
+    upload_json_parser.add_argument(
+        "-g",
+        "--geojson-file",
+        type=str,
+        required=True,
+        help="GeoJSON object file",
+    )
+    upload_json_parser.set_defaults(subcommand=_upload_labels_from_geojson)
 
 
 def cli():

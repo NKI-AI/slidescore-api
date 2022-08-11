@@ -75,6 +75,7 @@ def _shapely_to_slidescore(shapely_object):
         if shapely_object.interiors.__len__() != 0:
             if any([_.area > 0 for _ in shapely_object.interiors]):
                 raise RuntimeError(f"Expected Polygon to have empty interior. Got {list(shapely_object.interiors)}.")
+
         coordinates = shapely_object.exterior.coords
         if len(coordinates) < 3:
             raise RuntimeError(f"Malformed Polygon. Got {coordinates}.")

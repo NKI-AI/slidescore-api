@@ -10,12 +10,13 @@ import re
 import shutil
 import sys
 import urllib.parse
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union, TypedDict
 
 import requests
 from PIL import Image
 from requests import Response
 from tqdm import tqdm
+
 
 type_to_name = [
     "FreeText",
@@ -406,20 +407,33 @@ class APIClient:
         return rawresp
 
     def get_questions(self, study_id: int) -> str:
-        """Get questions belonging to study."""
+        """Get questions belonging to study. """
         response = self.perform_request(
             "Questions", {"studyid": study_id})
+        # This doesn't seem to return a success value.
         rjson = response.json()
 
         json_values = ["AnnoShapes", "AnnoMeasure", "AnnoPoints"]
 
-        # This doesn't seem to return a success value.
+        json_output = []
+        text_output = []
+
+        class QuestionJsonField(TypedDict):
+            name: str
+            color: str
+
+        class QuestionTextField(TypedDict):
+            pass
+
         for line in rjson:
-            print(line)
-        # rawresp = response.text
-        # if rawresp[0] != "<":
-        #     raise RuntimeError("Incomplete XML ASAP output.")
-        # return rawresp
+            name = line["name"]
+            type_name = line["typeName"]
+            color = line["valuesAllowed"].split(";")[0]
+
+            if type_name in json_values:
+                json_output.append(QuestionJsonField(name=name, color=color))
+
+        return json_output, text_output
 
     def get_image_server_url(self, image_id: int) -> Tuple[str, str]:
         """

@@ -299,7 +299,7 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
         extra_kwargs["question"] = question
 
     # First get the questions
-    questions = client.get_questions(study_id)
+    json_questions, text_questions = client.get_questions(study_id)
 
     images = client.get_images(study_id)
 

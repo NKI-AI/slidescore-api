@@ -10,13 +10,12 @@ import re
 import shutil
 import sys
 import urllib.parse
-from typing import Dict, Iterable, List, Optional, Tuple, Union, TypedDict
+from typing import Dict, Iterable, List, Optional, Tuple, TypedDict, Union
 
 import requests
 from PIL import Image
 from requests import Response
 from tqdm import tqdm
-
 
 type_to_name = [
     "FreeText",
@@ -407,9 +406,8 @@ class APIClient:
         return rawresp
 
     def get_questions(self, study_id: int) -> str:
-        """Get questions belonging to study. """
-        response = self.perform_request(
-            "Questions", {"studyid": study_id})
+        """Get questions belonging to study."""
+        response = self.perform_request("Questions", {"studyid": study_id})
         # This doesn't seem to return a success value.
         rjson = response.json()
 

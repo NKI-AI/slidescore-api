@@ -96,7 +96,7 @@ def _to_geojson_format(list_of_points: list, last_modified_on: str, label: str) 
     return feature_collection
 
 
-def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylint:disable=logging-fstring-interpolation
+def save_output(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylint:disable=logging-fstring-interpolation
     """
     Given a single Annotation of a WSI, this function writes them as shapely objects to disc
     Parameters

@@ -16,13 +16,13 @@ from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 from typing import Iterable, Optional
-from slidescore_api.utils.annotations import AnnotationType
+
 import shapely.geometry
 from tqdm import tqdm
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client
 from slidescore_api.logging import build_cli_logger
-from slidescore_api.utils.annotations import SlideScoreAnnotations, save_shapely
+from slidescore_api.utils.annotations import AnnotationType, SlideScoreAnnotations, save_output
 
 logger = logging.getLogger(__name__)
 
@@ -255,7 +255,6 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     api_token: str,
     study_id: int,
     save_dir: Path,
-    output_type: str,
     email: Optional[str] = None,
     question: Optional[str] = None,
     disable_certificate_check: bool = False,
@@ -274,8 +273,6 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
         Study id as used by SlideScore.
     save_dir: Path
         Directory to save the labels to.
-    output_type: str
-        User defined output format in which the annotations need to be saved.
     email: str, optional
         The author email/name as registered on SlideScore to download those specific annotations.
     question : str
@@ -306,20 +303,14 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     for image in tqdm(images):
         image_id = image["id"]
         annotations = client.get_results(study_id, imageid=image_id, **extra_kwargs)
-        if LabelOutputType[output_type] == LabelOutputType.RAW:
-            with open(save_dir / "annotations.txt", "a", encoding="utf-8") as file:
-                for annotation in annotations:
-                    file.write(annotation.to_row() + "\n")
-        elif LabelOutputType[output_type] == LabelOutputType.GEOJSON:
-            annotation_parser = SlideScoreAnnotations()
-            row_iterator = _row_iterator(annotations)
 
-            for curr_annotation in annotation_parser.from_iterable(
-                row_iterator, filter_author=email, filter_label=question
-            ):
-                save_shapely(curr_annotation, save_dir=save_dir)
-        else:
-            raise RuntimeError(f"Output type {output_type} not supported.")
+        annotation_parser = SlideScoreAnnotations()
+        row_iterator = _row_iterator(annotations)
+
+        for curr_annotation in annotation_parser.from_iterable(
+            row_iterator, filter_author=email, filter_label=question
+        ):
+            save_output(curr_annotation, save_dir=save_dir)
 
 
 def _download_labels(args: argparse.Namespace) -> None:
@@ -341,7 +332,6 @@ def _download_labels(args: argparse.Namespace) -> None:
         api_token,
         args.study_id,
         args.output_dir,
-        output_type=args.output_type,
         question=args.question,
         email=args.user,
         disable_certificate_check=args.disable_certificate_check,
@@ -459,15 +449,6 @@ def register_parser(parser: argparse._SubParsersAction):
         "If not set, will return questions from all users.",
         type=str,
         required=False,
-    )
-    download_label_parser.add_argument(
-        "-o",
-        "--output-type",
-        dest="output_type",
-        help="Type of output. GeoJSON is a compliant GeoJSON output.",
-        type=str,
-        choices=LabelOutputType.__members__,
-        default="GEOJSON",
     )
     download_label_parser.add_argument(
         "output_dir",

@@ -72,7 +72,7 @@ def parse_api_token(data: Optional[Path] = None) -> str:
 def _shapely_to_slidescore(shapely_object):
     shapely_type = type(shapely_object)
     if shapely_type == shapely.geometry.Polygon:
-        assert shapely_object.interiors.__len__() == 0
+        assert len(shapely_object.interiors) == 0
         coordinates = shapely_object.exterior.coords
         assert len(coordinates) >= 3
         answer = [{"x": int(x), "y": int(y)} for x, y in coordinates]

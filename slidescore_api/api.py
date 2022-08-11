@@ -418,20 +418,15 @@ class APIClient:
         json_output = []
         text_output = []
 
-        class QuestionJsonField(TypedDict):
-            name: str
-            color: str
-
-        class QuestionTextField(TypedDict):
-            pass
-
         for line in rjson:
-            name = line["name"]
+            question = line["name"]
             type_name = line["typeName"]
-            color = line["valuesAllowed"].split(";")[0]
+            values_allowed = line["valuesAllowed"]
 
             if type_name in json_values:
-                json_output.append(QuestionJsonField(name=name, color=color))
+                json_output.append((question, values_allowed))
+            else:
+                text_output.append((question, values_allowed))
 
         return json_output, text_output
 

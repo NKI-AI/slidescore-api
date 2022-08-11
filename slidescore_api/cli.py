@@ -16,7 +16,7 @@ from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 from typing import Iterable, Optional
-
+from slidescore_api.utils.annotations import AnnotationType
 import shapely.geometry
 from tqdm import tqdm
 
@@ -306,9 +306,7 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     for image in tqdm(images):
         image_id = image["id"]
         annotations = client.get_results(study_id, imageid=image_id, **extra_kwargs)
-        if LabelOutputType[output_type] == LabelOutputType.JSON:
-            _save_label_as_json(save_dir, image_id, image, annotations)
-        elif LabelOutputType[output_type] == LabelOutputType.RAW:
+        if LabelOutputType[output_type] == LabelOutputType.RAW:
             with open(save_dir / "annotations.txt", "a", encoding="utf-8") as file:
                 for annotation in annotations:
                     file.write(annotation.to_row() + "\n")

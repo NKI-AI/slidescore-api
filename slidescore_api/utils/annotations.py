@@ -54,6 +54,7 @@ class AnnotationType(Enum):
     BRUSH: str = "brush"
     HEATMAP: str = "heatmap"
     POINTS: str = "points"
+    COMMENT: str = "comment"
 
 
 def _to_geojson_format(list_of_points: list, last_modified_on: str, label: str) -> GeoJsonDict:
@@ -112,11 +113,17 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
     """
     save_path = save_dir / annotations.author / annotations.ImageID
     save_path.mkdir(parents=True, exist_ok=True)
+    output = None
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
+        comment_list: list = []
         for ann_id, _ in enumerate(annotations.annotation):
             # rects are internally polygons
             annotation_type = AnnotationType[annotations.annotation[ann_id]["type"].upper()]
+
+            if annotation_type == AnnotationType.COMMENT:
+                continue
+
             is_polygon = annotation_type in (
                 AnnotationType.POLYGON,
                 AnnotationType.BRUSH,
@@ -137,10 +144,11 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
             for data in dump_list:
                 output += data.geoms
 
-        feature_collection = _to_geojson_format(
-            output, last_modified_on=annotations.lastModifiedOn, label=annotations.label
-        )
-        json.dump(feature_collection, file, indent=2)
+        if output:
+            feature_collection = _to_geojson_format(
+                output, last_modified_on=annotations.lastModifiedOn, label=annotations.label
+            )
+            json.dump(feature_collection, file, indent=2)
 
 
 def _parse_brush_annotation(annotations: Dict) -> Dict:  # pylint:disable=logging-fstring-interpolation

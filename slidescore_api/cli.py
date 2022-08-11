@@ -83,11 +83,13 @@ def _shapely_to_slidescore(shapely_object):
 
     elif shapely_type == shapely.geometry.Point:
         raise NotImplementedError
+        # Output is of the following form
         # output = {"x": int(x), "y": int(y)}
 
     else:
         raise NotImplementedError
 
+    # THis can be useful for boxes
     # x0, y0, x1, y1 = curr_shape.bounds
     # h = x1 - x0
     # w = y1 - y0

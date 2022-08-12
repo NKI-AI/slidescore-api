@@ -152,6 +152,53 @@ def save_output(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylint
             json.dump(feature_collection, file, indent=2)
 
 
+def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylint:disable=logging-fstring-interpolation
+    """
+    Given a single Annotation of a WSI, this function writes them as shapely objects to disc
+    Parameters
+    ----------
+    annotations: ImageAnnotation
+        A named Tuple containing Image annotations
+    save_dir: Path
+        A Path object pointing to the directory where the shapely objects need to be written.
+    Returns
+    ----------
+    None
+    """
+    save_path = save_dir / annotations.author / annotations.ImageID
+    save_path.mkdir(parents=True, exist_ok=True)
+    with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
+        dump_list: list = []
+        for ann_id, _ in enumerate(annotations.annotation):
+            # rects are internally polygons
+            annotation_type = AnnotationType[annotations.annotation[ann_id]["type"].upper()]
+            is_polygon = annotation_type in (
+                AnnotationType.POLYGON,
+                AnnotationType.BRUSH,
+                AnnotationType.RECT,
+            )
+            if not is_polygon and annotation_type != AnnotationType.POINTS:
+                raise RuntimeError(f"Annotation type {annotation_type} is not supported.")
+            coords = annotations.annotation[ann_id]["points"]
+            if isinstance(coords, (Polygon, MultiPolygon)) and coords.area == 0:
+                logger.warning(
+                    f"Dismissed polygon for {annotations.author} and {annotations.slide_name} because area = 0."
+                )
+                continue
+
+            dump_list.append(coords)
+
+            output = []
+            for data in dump_list:
+                output += data.geoms
+
+        feature_collection = _to_geojson_format(
+            output, last_modified_on=annotations.lastModifiedOn, label=annotations.label
+        )
+        json.dump(feature_collection, file, indent=2)
+
+
+
 def _parse_brush_annotation(annotations: Dict) -> Dict:  # pylint:disable=logging-fstring-interpolation
     """
 
@@ -336,49 +383,86 @@ class SlideScoreAnnotations:
                 self._row_iterator = line
                 yield self._row_iterator
 
-    def _parse_annotation_row(self, row, filter_empty):  # pylint:disable=too-many-branches
+    def _parse_annotation_row(self,
+                              row: str,
+                              filter_empty: bool,
+                              filter_labels: List[str]):  # pylint:disable=too-many-branches
         _row = dict(zip(self._headers, row.split("\t")))
+        if _row['Question'] not in filter_labels:
+            print(f"question {_row['Question']} not in filter_labels, returning None")
+            return None
+        if _row['Answer'] == "[]" and filter_empty:
+            return None
+        print("Parsing for question {}".format(_row['Question']))
         data = {}
+        ann = json.loads(_row["Answer"])
 
-        try:
-            ann = json.loads(_row["Answer"])
-        except json.decoder.JSONDecodeError:
-            if len(_row["Answer"]) > 0:
-                data = {0: {"type": "comment", "text": _row["Answer"]}}
-                return _row, data
-            elif filter_empty:
-                return None
-
-        if isinstance(ann, int):
-            data = {0: {"type": "comment", "text": _row["Answer"]}}
-            return _row, data
-        if len(ann) > 0:
-
-            # Points dont have type, only x,y; so we use that to distinguish task
-            # Code can be shortened, but is more readable this way
-            if "type" in ann[0]:
-                label_type = "segmentation"
-            else:
-                label_type = "detection"
+        if "type" in ann[0]:
+            label_type = "segmentation"
+        else:
+            label_type = "detection"
 
             # Segmentation - Treat brush, polygon as MultiPolygon
-            if label_type == "segmentation":
-                for idx, _ann in enumerate(ann):
-                    try:
-                        data[idx] = self._parse_fns[_ann["type"]](_ann)
-                    except shapely.errors.GEOSException:
-                        return None
+        if label_type == "segmentation":
+            for idx, _ann in enumerate(ann):
+                try:
+                    data[idx] = self._parse_fns[_ann["type"]](_ann)
+                except shapely.errors.GEOSException:
+                    return None
 
             # Detection - Treat points as MultiPoint
-            elif label_type == "detection":
-                data[0] = self._parse_fns["points"](ann)
+        elif label_type == "detection":
+            data[0] = self._parse_fns["points"](ann)
 
-            else:
-                raise NotImplementedError(f"label_type ( {label_type} ) not implemented.")
+        else:
+            raise NotImplementedError(f"label_type ( {label_type} ) not implemented.")
 
-        elif filter_empty:
-            return None
         return _row, data
+
+
+        # data = {}
+        # if _row["ImageID"] in self._annotated_images:
+        #     try:
+        #         ann = json.loads(_row["Answer"])
+        #     except json.decoder.JSONDecodeError:
+        #         if len(_row["Answer"]) > 0:
+        #             data = {0: {"type": "comment", "text": _row["Answer"]}}
+        #             return _row, data
+        #         elif filter_empty:
+        #             return None
+        #
+        #     if isinstance(ann, int):
+        #         data = {0: {"type": "comment", "text": _row["Answer"]}}
+        #         return _row, data
+        #     if len(ann) > 0:
+        #
+        #         # Points dont have type, only x,y; so we use that to distinguish task
+        #         # Code can be shortened, but is more readable this way
+        #         if "type" in ann[0]:
+        #             label_type = "segmentation"
+        #         else:
+        #             label_type = "detection"
+        #
+        #         # Segmentation - Treat brush, polygon as MultiPolygon
+        #         if label_type == "segmentation":
+        #             for idx, _ann in enumerate(ann):
+        #                 try:
+        #                     data[idx] = self._parse_fns[_ann["type"]](_ann)
+        #                 except shapely.errors.GEOSException:
+        #                     return None
+        #
+        #         # Detection - Treat points as MultiPoint
+        #         elif label_type == "detection":
+        #             data[0] = self._parse_fns["points"](ann)
+        #
+        #         else:
+        #             raise NotImplementedError(f"label_type ( {label_type} ) not implemented.")
+        #
+        #     elif filter_empty:
+        #         return None
+
+        # return _row, data
+
 
     @property
     def annotated_images_list(self) -> list:
@@ -399,7 +483,7 @@ class SlideScoreAnnotations:
         self,
         row_iterator: Iterable,
         filter_author: str = None,
-        filter_label: str = None,
+        filter_labels: List[str] = None,
         filter_empty=True,
     ) -> Iterable:
         """
@@ -425,8 +509,8 @@ class SlideScoreAnnotations:
             A binary flag to indicate whether or not empty rows must be filtered.
         filter_author: str
             Email-like string to look for annotations corresponding to a particular annotation author.
-        filter_label:
-            a string that indicates a label name in the slidescore study deemed necessary by the user.
+        filter_labels:
+            a list of strings that indicates a label names in the slidescore study deemed necessary by the user.
 
         Returns
         -------
@@ -434,7 +518,8 @@ class SlideScoreAnnotations:
             A named tuple containing the attributes and annotations of a single WSI.
         """
         for row in row_iterator:
-            _return = self._parse_annotation_row(row, filter_empty=filter_empty)
+            _return = self._parse_annotation_row(row, filter_empty=filter_empty,
+                                                 filter_labels=filter_labels)
             if _return is None:
                 self.num_empty += 1
                 continue
@@ -448,10 +533,9 @@ class SlideScoreAnnotations:
                 annotation=data,
             )
 
-            if filter_author is not None or filter_label is not None:
-                if row_annotation.author != filter_author or row_annotation.label != filter_label:
+            if filter_author is not None:
+                if row_annotation.author != filter_author:
                     self.unannotated += 1
                     continue
             self.annotations_generated += 1
-
             yield row_annotation

@@ -405,7 +405,7 @@ class APIClient:
             raise RuntimeError("Incomplete XML ASAP output.")
         return rawresp
 
-    def get_questions(self, study_id: int) -> str:
+    def get_questions(self, study_id: int) -> Tuple[List[str], List[str]]:
         """Get questions belonging to study."""
         response = self.perform_request("Questions", {"studyid": study_id})
         # This doesn't seem to return a success value.
@@ -413,8 +413,8 @@ class APIClient:
 
         json_values = ["AnnoShapes", "AnnoMeasure", "AnnoPoints"]
 
-        json_output = []
-        text_output = []
+        json_output: List[str] = []
+        text_output: List[str] = []
 
         for line in rjson:
             question = line["name"]
@@ -422,9 +422,9 @@ class APIClient:
             values_allowed = line["valuesAllowed"]
 
             if type_name in json_values:
-                json_output.append((question, values_allowed))
+                json_output.append(question)
             else:
-                text_output.append((question, values_allowed))
+                text_output.append(question)
 
         return json_output, text_output
 

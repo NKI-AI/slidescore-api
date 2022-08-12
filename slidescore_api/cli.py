@@ -22,7 +22,7 @@ from tqdm import tqdm
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client
 from slidescore_api.logging import build_cli_logger
-from slidescore_api.utils.annotations import AnnotationType, SlideScoreAnnotations, save_output
+from slidescore_api.utils.annotations import AnnotationType, SlideScoreAnnotations, save_output, save_shapely
 
 logger = logging.getLogger(__name__)
 
@@ -233,12 +233,15 @@ def _save_label_as_json(save_dir, image_id, image, annotations):
         "annotations": [],
     }
 
-    for annotation in annotations:
-        data = annotation.points
-        if not data:
-            continue
+    keys = annotations.annotation.keys()
+    for k in keys:
+        data = annotations.annotation[k]
+    # for annotation in annotations:
+    #     data = annotation.points
+    #     if not data:
+    #         continue
 
-        annotation_data["annotations"].append({"user": annotation.user, "question": annotation.question, "data": data})
+        annotation_data["annotations"].append({"user": annotations.author, "question": annotations.label, "data": data['points']})
 
     # Now save this to JSON.
     with open(save_dir / f"{image_id}.json", "w", encoding="utf-8") as file:
@@ -254,9 +257,10 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     slidescore_url: str,
     api_token: str,
     study_id: int,
+    output_type: str,
     save_dir: Path,
     email: Optional[str] = None,
-    question: Optional[str] = None,
+    question_type: Optional[str] = None,
     disable_certificate_check: bool = False,
 ) -> None:
     """
@@ -275,8 +279,8 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
         Directory to save the labels to.
     email: str, optional
         The author email/name as registered on SlideScore to download those specific annotations.
-    question : str
-        The question to obtain the labels for. If not given all labels will be obtained.
+    question_type : str
+        The question type (JSON or TEXT) to be downloaded. if not given, all types will be downloaded.
     disable_certificate_check : bool
         Disable HTTPS certificate check.
 
@@ -284,6 +288,9 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     -------
     None
     """
+    if question_type not in ['JSON', 'TEXT']:
+        raise ValueError("question_type must be either 'JSON' or 'TEXT'")
+
     client = build_client(slidescore_url, api_token, disable_certificate_check)
 
     if not save_dir.is_dir():
@@ -292,25 +299,60 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     extra_kwargs = {}
     if email is not None:
         extra_kwargs["email"] = email
-    if question is not None:
-        extra_kwargs["question"] = question
 
     # First get the questions
     json_questions, text_questions = client.get_questions(study_id)
+    if question_type == "JSON":
+        questions = json_questions
+    else:
+        questions = text_questions
 
     images = client.get_images(study_id)
 
     for image in tqdm(images):
         image_id = image["id"]
         annotations = client.get_results(study_id, imageid=image_id, **extra_kwargs)
+        if LabelOutputType[output_type] == LabelOutputType.JSON:
+            _save_label_as_json(save_dir, image_id, image, annotations)
+        elif LabelOutputType[output_type] == LabelOutputType.RAW:
+            with open(save_dir / "annotations.txt", "a", encoding="utf-8") as file:
+                for annotation in annotations:
+                    file.write(annotation.to_row() + "\n")
+        elif LabelOutputType[output_type] == LabelOutputType.GEOJSON:
+            annotation_parser = SlideScoreAnnotations()
+            row_iterator = _row_iterator(annotations)
 
-        annotation_parser = SlideScoreAnnotations()
-        row_iterator = _row_iterator(annotations)
+            for curr_annotation in annotation_parser.from_iterable(
+                    row_iterator, filter_author=email, filter_labels=questions
+            ):
+                save_shapely(curr_annotation, save_dir=save_dir)
+        else:
+            raise RuntimeError(f"Output type {output_type} not supported.")
 
-        for curr_annotation in annotation_parser.from_iterable(
-            row_iterator, filter_author=email, filter_label=question
-        ):
-            save_output(curr_annotation, save_dir=save_dir)
+
+
+
+
+
+
+    #
+    # images = client.get_images(study_id)
+    #
+    # for image in tqdm(images):
+    #     image_id = image["id"]
+    #     annotations = client.get_results(study_id, imageid=image_id, **extra_kwargs)
+    #
+    #     annotation_parser = SlideScoreAnnotations()
+    #     row_iterator = _row_iterator(annotations)
+    #
+    #     for curr_annotation in annotation_parser.from_iterable(
+    #         row_iterator, filter_author=email,
+    #             filter_labels=(json_questions if question_type == "JSON" else text_questions)
+    #     ):
+    #         if curr_annotation:
+    #             _save_label_as_json(save_dir, image_id, image, curr_annotation)
+    #             save_output(curr_annotation, save_dir=save_dir)
+    #             save_shapely()
 
 
 def _download_labels(args: argparse.Namespace) -> None:

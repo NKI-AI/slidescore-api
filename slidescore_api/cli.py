@@ -311,14 +311,9 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
         for curr_annotation in annotation_parser.from_iterable(
             row_iterator, filter_author=email, filter_label=question
         ):
-            _save = True
-            for over_lap_item in overlap:
-                if curr_annotation.label == over_lap_item and curr_annotation.annotation[0]["type"] == "comment":
-                    _save = False
-                    break
-
-            if _save:
-                save_output(curr_annotation, save_dir=save_dir)
+            if curr_annotation.label == "Artefacts":
+                continue
+            save_output(curr_annotation, save_dir=save_dir)
 
 
 def _download_labels(args: argparse.Namespace) -> None:

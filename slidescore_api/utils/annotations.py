@@ -121,7 +121,6 @@ def save_output(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylint
         for ann_id, _ in enumerate(annotations.annotation):
             # rects are internally polygons
             annotation_type = AnnotationType[annotations.annotation[ann_id]["type"].upper()]
-
             if annotation_type == AnnotationType.COMMENT or annotation_type == AnnotationType.ELLIPSE:
                 continue
 

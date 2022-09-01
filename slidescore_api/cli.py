@@ -297,6 +297,7 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
 
     # First get the questions
     json_questions, text_questions = client.get_questions(study_id)
+    text_questions = [q for (q, a) in text_questions]
     overlap = list(set(json_questions) & set(text_questions))
 
     images = client.get_images(study_id)

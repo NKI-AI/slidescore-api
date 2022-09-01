@@ -21,7 +21,7 @@ import shapely.geometry
 from tqdm import tqdm
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client
-from slidescore_api.logging import build_cli_logger
+from slidescore_api._logging import build_cli_logger
 from slidescore_api.utils.annotations import AnnotationType, SlideScoreAnnotations, save_output
 
 logger = logging.getLogger(__name__)
@@ -300,7 +300,6 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
     overlap = list(set(json_questions) & set(text_questions))
 
     images = client.get_images(study_id)
-
     for image in tqdm(images):
         image_id = image["id"]
         annotations = client.get_results(study_id, imageid=image_id, **extra_kwargs)
@@ -312,6 +311,9 @@ def download_labels(  # pylint: disable=too-many-arguments,too-many-locals,too-m
             row_iterator, filter_author=email, filter_label=question
         ):
             if curr_annotation.label == "Artefacts":
+                continue
+            if curr_annotation.label in text_questions:
+                print(f"skipping {curr_annotation.label}")
                 continue
             save_output(curr_annotation, save_dir=save_dir)
 

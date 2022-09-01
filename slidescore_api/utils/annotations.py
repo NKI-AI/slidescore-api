@@ -48,7 +48,6 @@ class AnnotationType(Enum):
     """
     Enumerated class for type of slidescore annotations
     """
-
     POLYGON: str = "polygon"
     RECT: str = "rect"
     ELLIPSE: str = "ellipse"

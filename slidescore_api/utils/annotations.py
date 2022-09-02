@@ -10,8 +10,9 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, NamedTuple, TypedDict, Union
 
 import numpy as np
+import shapely.validation
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping
-
+import shapely.errors
 logger = logging.getLogger(__name__)
 
 
@@ -124,14 +125,13 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
             )
             if not is_polygon and annotation_type != AnnotationType.POINTS:
                 raise RuntimeError(f"Annotation type {annotation_type} is not supported.")
+
             coords = annotations.annotation[ann_id]["points"]
             if isinstance(coords, (Polygon, MultiPolygon)) and coords.area == 0:
                 logger.warning(
                     f"Dismissed polygon for {annotations.author} and {annotations.slide_name} because area = 0."
                 )
                 continue
-
-            dump_list.append(coords)
 
             output = []
             for data in dump_list:
@@ -173,9 +173,12 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:  # pylint:disable=loggin
         inners = []
         for idx, n_poly in negative_polygons.items():
             if not used_negatives[idx]:
+                if not n_poly.is_valid:
+                    n_poly = shapely.validation.make_valid(n_poly)
                 if n_poly.within(p_poly):
                     inners.append(n_poly)
                     used_negatives[idx] = True
+
         inners_count += len(inners)
         polygon = Polygon(p_poly, inners)
         polygons.append(polygon)

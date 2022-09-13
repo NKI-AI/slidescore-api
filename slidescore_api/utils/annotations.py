@@ -132,9 +132,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
                     f"Dismissed polygon for {annotations.author} and {annotations.slide_name} because area = 0."
                 )
                 continue
-                
             dump_list.append(coords)
-
             output = []
             for data in dump_list:
                 output += data.geoms

@@ -1,4 +1,3 @@
-#!/home/ajey/miniconda3/bin/python3
 # coding=utf-8
 """Utility file containing parsing modules and functions to save slidescore annotations."""
 

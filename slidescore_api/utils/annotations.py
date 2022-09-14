@@ -250,7 +250,12 @@ def _parse_rect_annotation(annotations: Dict) -> Dict:
     # returns corner: Point, size: Point
     corner = np.array([annotations["corner"]["x"], annotations["corner"]["y"]], dtype=np.float32)
     size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
-    points = box(*corner, *(corner + size), ccw=True)
+
+    if np.isnan([np.asarray([corner, size])]).any():  # there are invalid rects, skip them
+        logger.warning(f"Invalid polygon: {annotations}")
+        points = []
+    else:
+        points = box(*corner, *(corner + size), ccw=True)
 
     data = {
         "type": "rect",

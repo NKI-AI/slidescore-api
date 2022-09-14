@@ -1,4 +1,3 @@
-#!/home/ajey/miniconda3/bin/python3
 # coding=utf-8
 """Utility file containing parsing modules and functions to save slidescore annotations."""
 
@@ -10,9 +9,10 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, NamedTuple, TypedDict, Union
 
 import numpy as np
+import shapely.errors
 import shapely.validation
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping
-import shapely.errors
+
 logger = logging.getLogger(__name__)
 
 
@@ -132,7 +132,7 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
                     f"Dismissed polygon for {annotations.author} and {annotations.slide_name} because area = 0."
                 )
                 continue
-
+            dump_list.append(coords)
             output = []
             for data in dump_list:
                 output += data.geoms

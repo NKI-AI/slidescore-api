@@ -176,7 +176,7 @@ class APIClient:
         url = urllib.parse.urljoin(self.end_point, request)
 
         if method == "POST":
-            response = requests.post(url, verify=self.verify_certificate, headers=headers, data=data)
+            response = requests.post(url, verify=self.verify_certificate, headers=headers, data=data, timeout=60)
         else:
             response = requests.get(
                 url,
@@ -184,6 +184,7 @@ class APIClient:
                 headers=headers,
                 data=data,
                 stream=stream,
+                timeout=60,
             )
         if response.status_code != 200:
             response.raise_for_status()
@@ -466,6 +467,7 @@ class APIClient:
             self.base_url + f"/{str(level)}/{str(x_coord)}_{str(y_coord)}.jpeg",
             stream=True,
             cookies=cookies,
+            timeout=60,
         )
         if response.status_code == 200:
             return Image.open(io.BytesIO(response.content))

@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, NamedTuple, TypedDict, Union
 
 import numpy as np
+import shapely.errors
 import shapely.validation
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping
-import shapely.errors
+
 logger = logging.getLogger(__name__)
 
 

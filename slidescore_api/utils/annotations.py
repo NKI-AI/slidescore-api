@@ -115,7 +115,6 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
     save_path.mkdir(parents=True, exist_ok=True)
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
-        output: list = []
         for ann_id, _ in enumerate(annotations.annotation):
             # rects are internally polygons
             annotation_type = AnnotationType[annotations.annotation[ann_id]["type"].upper()]
@@ -134,11 +133,8 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
                 )
                 continue
             dump_list.append(coords)
-            for data in dump_list:
-                output += data.geoms
-
         feature_collection = _to_geojson_format(
-            output, last_modified_on=annotations.lastModifiedOn, label=annotations.label
+            dump_list, last_modified_on=annotations.lastModifiedOn, label=annotations.label
         )
         json.dump(feature_collection, file, indent=2)
 

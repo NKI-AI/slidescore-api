@@ -85,6 +85,12 @@ def _shapely_to_slidescore(shapely_object):
     elif shapely_type == shapely.geometry.Point:
         output = [{"x": int(shapely_object.x), "y": int(shapely_object.y)}]
 
+    elif shapely_type == shapely.geometry.MultiPolygon:
+        output = []
+        for shape in shapely_object.geoms:
+            shape_coords = [{"x": int(x), "y": int(y)} for x, y in shape.exterior.coords]
+            output.append({"type": "polygon", "points": shape_coords})
+
     else:
         raise NotImplementedError
 

@@ -187,10 +187,8 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:  # pylint:disable=loggin
             f"{[list(negative_polygons[idx].exterior.coords) for idx, val in used_negatives.items() if not val]}.\n"
             f"Areas   :{[negative_polygons[nidx].area for nidx, val in used_negatives.items() if not val]}.\n"
         )
-    if len(polygons) == 1:
-        points = Polygon(polygons)
-    else:
-        points = MultiPolygon(polygons)
+
+    points = MultiPolygon(polygons)
     data = {
         "type": "brush",
         "points": points,
@@ -215,7 +213,8 @@ def _parse_polygon_annotation(annotations: Dict) -> Dict:  # pylint:disable=logg
     if len(points) < 3:
         logger.warning(f"Invalid polygon: {annotations}")
         points = []
-    points = Polygon(points)
+
+    points = MultiPolygon([Polygon(points)])
     data = {
         "type": "polygon",
         "points": points,

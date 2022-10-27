@@ -263,7 +263,7 @@ class APIClient:
             open(temp_write_to, "wb"),
             "write",
             miniters=1,
-            desc=filename,
+            desc=str(filename),
             total=None,
         ) as file:
             for chunk in response.iter_content(chunk_size=4096):

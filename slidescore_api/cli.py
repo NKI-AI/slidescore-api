@@ -21,7 +21,7 @@ import shapely.geometry
 from tqdm import tqdm
 
 from slidescore_api.api import APIClient, SlideScoreResult, build_client
-from slidescore_api.logging import build_cli_logger
+from slidescore_api.cli_logging import build_cli_logger
 from slidescore_api.utils.annotations import SlideScoreAnnotations, save_shapely
 
 logger = logging.getLogger(__name__)

@@ -5,6 +5,9 @@
 This module contains the CLI utilities that can be used with slidescore in python.
 
 """
+
+# pylint: disable=duplicate-code
+
 import argparse
 import csv
 import json
@@ -15,7 +18,7 @@ import sys
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, List, Optional, Union
 
 import shapely.geometry
 from tqdm import tqdm
@@ -70,6 +73,7 @@ def parse_api_token(data: Optional[Path] = None) -> str:
 
 
 def _shapely_to_slidescore(shapely_object):
+    # pylint: disable=too-many-branches
     shapely_type = type(shapely_object)
     if shapely_type == shapely.geometry.Polygon:
         if len(shapely_object.interiors) != 0:
@@ -351,22 +355,78 @@ def _download_labels(args: argparse.Namespace) -> None:
     )
 
 
-def append_to_manifest(save_dir: pathlib.Path, image_id: int, filename: pathlib.Path) -> None:
+def append_to_manifest(save_dir: pathlib.Path, keys: List[str], value: Union[pathlib.Path, int, str]) -> None:
     """
-    Create a manifest mapping image id to the filename.
+    Generic method to append a hierarchical key structure with one value to a dictionary in a json file to fix
+    missing functionality in python dict classes
+
+    Works as desired:
+    >> {}['a'] = 1
+    {'a': 1'}
+
+    Does not work as desired in this case
+    >> {}['a', 'b'] = 1
+    {('a', 'b'): 1}
+
+    The following is not possible in a python dict, and throws an error
+    >> {}[['a', 'b']] = 1
+    TypeError: unhashable type: 'list'
+
+    We wish to get
+    >> {}[['a', 'b']] = 1
+    {'a': {'b': 1}}
+
+    Used to create a manifest mapping filename to slidescore ID Created when downloading WSIs from slidescores.
+
+    Will end up with something like
+    {
+        'slidescore_url': str,
+        'slidescore_study_id': int,
+        'slide_filename_to_id_mapping': {
+            str: int
+            ...
+        }
+    }
 
     Parameters
     ----------
     save_dir : pathlib.Path
-    image_id : int
-    filename : pathlib.Path
+    keys : List[Union[str, pathlib.Path]], sets the hierarchical keys to be set.
+        E.g. ['slide_filename_id_mapping', 'filename']
+    sets manifest['slide_filename_id_mapping']['filename'] to the given slidescore ID
+    value : Union[int, pathlib.Path, str], value to be set. Generally either a URL, a path, or an integer ID
 
     Returns
     -------
     None
     """
-    with open(save_dir / "slidescore_mapping.txt", "a", encoding="utf-8") as file:
-        file.write(f"{image_id} {filename.name}\n")
+    # Make dir if it doesn't exist. Usage in the CLI, however, places it in an existing directory
+    if not save_dir.is_dir():
+        save_dir.mkdir(parents=True)
+
+    value = value.name if isinstance(value, pathlib.Path) else value
+    config_filepath = save_dir / "download_config.json"
+
+    try:
+        # Read file if it exists
+        with open(config_filepath, mode="r", encoding="utf-8") as file:
+            obj = json.load(file)
+    except FileNotFoundError:
+        # Otherwise create new object
+        obj = {}
+
+    new_obj = obj  # Create a pointer that we can update
+    for idx, key in enumerate(keys):
+        if idx == len(keys) - 1:  # At the last node
+            new_obj[key] = value  # Set the leaf
+        else:
+            if key not in new_obj.keys():
+                new_obj[key] = {}  # Not at the last node and the key does not exist; make a subdict
+            new_obj = new_obj[key]  # Update pointer
+
+    # Save file, overwriting the old file
+    with open(config_filepath, mode="w", encoding="utf-8") as file:
+        json.dump(obj, file, ensure_ascii=False, indent=4)
 
 
 def download_wsis(
@@ -399,6 +459,10 @@ def download_wsis(
     # Collect image metadata
     images = client.get_images(study_id)
 
+    # # Add study details to manifest
+    append_to_manifest(save_dir=save_dir, keys=[slidescore_url, str(study_id), "slidescore_url"], value=slidescore_url)
+    append_to_manifest(save_dir=save_dir, keys=[slidescore_url, str(study_id), "slidescore_study_id"], value=study_id)
+
     # Download and save WSIs
     for image in tqdm(images):
         image_id = image["id"]
@@ -406,7 +470,11 @@ def download_wsis(
         logger.info("Downloading image for id: %s", image_id)
         filename = client.download_slide(study_id, image, save_dir=save_dir)
         logger.info("Image with id %s has been saved to %s.", image_id, filename)
-        append_to_manifest(save_dir, image_id, filename)
+        append_to_manifest(
+            save_dir=save_dir,
+            keys=[slidescore_url, str(study_id), "slide_filename_to_study_image_id_mapping", filename.name],
+            value=image_id,
+        )
 
 
 def _download_wsi(args: argparse.Namespace):

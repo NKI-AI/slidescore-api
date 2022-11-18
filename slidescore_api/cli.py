@@ -355,7 +355,35 @@ def _download_labels(args: argparse.Namespace) -> None:
     )
 
 
-def append_to_manifest(save_dir: pathlib.Path, keys: List[str], value: Union[pathlib.Path, int, str]) -> None:
+def append_to_tsv_mapping(save_dir: pathlib.Path, items: List[str]) -> None:
+    """
+    Create a manifest mapping image id to image name
+
+    Creates a file that looks like
+    ```txt
+    # <slidescore_url>
+    # <slidescore_study_id>
+    <image_id_1>    <image_name_1>
+    ...
+    ```
+
+    Parameters
+    ----------
+        save_dir: pathlib.Path
+        items: List[str]
+
+    Returns
+    -------
+        None
+    """
+    if not save_dir.is_dir():
+        save_dir.mkdir(parents=True)
+    tab = "\t"
+    with open(save_dir / "slidescore_mapping.tsv", "a+", encoding="utf-8") as file:
+        file.write(f"{tab.join(items)}\n")
+
+
+def append_to_json_mapping(save_dir: pathlib.Path, keys: List[str], value: Union[pathlib.Path, int, str]) -> None:
     """
     Generic method to append a hierarchical key structure with one value to a dictionary in a json file to fix
     missing functionality in python dict classes
@@ -405,7 +433,7 @@ def append_to_manifest(save_dir: pathlib.Path, keys: List[str], value: Union[pat
         save_dir.mkdir(parents=True)
 
     value = value.name if isinstance(value, pathlib.Path) else value
-    config_filepath = save_dir / "download_config.json"
+    config_filepath = save_dir / "slidescore_mapping.json"
 
     try:
         # Read file if it exists
@@ -429,12 +457,15 @@ def append_to_manifest(save_dir: pathlib.Path, keys: List[str], value: Union[pat
         json.dump(obj, file, ensure_ascii=False, indent=4)
 
 
+# pylint: disable=too-many-arguments
 def download_wsis(
     slidescore_url: str,
     api_token: str,
     study_id: int,
     save_dir: pathlib.Path,
     disable_certificate_check: bool = False,
+    disable_download: bool = False,
+    mapping_format: str = "json",
 ) -> None:
     """
     Download all WSIs for a given study from SlideScore
@@ -446,6 +477,9 @@ def download_wsis(
     study_id : int
     save_dir : pathlib.Path
     disable_certificate_check : bool
+    disable_download : bool
+    mapping_format: str
+        either of "json" or "tsv"
 
     Returns
     -------
@@ -459,31 +493,56 @@ def download_wsis(
     # Collect image metadata
     images = client.get_images(study_id)
 
-    # # Add study details to manifest
-    append_to_manifest(save_dir=save_dir, keys=[slidescore_url, str(study_id), "slidescore_url"], value=slidescore_url)
-    append_to_manifest(save_dir=save_dir, keys=[slidescore_url, str(study_id), "slidescore_study_id"], value=study_id)
+    # # Add study details to mapping manifest
+    if mapping_format == "json":
+        append_to_json_mapping(
+            save_dir=save_dir, keys=[slidescore_url, str(study_id), "slidescore_url"], value=slidescore_url
+        )
+        append_to_json_mapping(
+            save_dir=save_dir, keys=[slidescore_url, str(study_id), "slidescore_study_id"], value=study_id
+        )
+    elif mapping_format == "tsv":
+        append_to_tsv_mapping(save_dir=save_dir, items=[f"# {slidescore_url}"])
+        append_to_tsv_mapping(save_dir=save_dir, items=[f"# {study_id}"])
 
     # Download and save WSIs
     for image in tqdm(images):
         image_id = image["id"]
+        image_name = image["name"]
+        if not disable_download:
+            logger.info("Downloading image for id: %s", image_id)
+            filename = client.download_slide(study_id, image, save_dir=save_dir)
+            logger.info("Image with id %s has been saved to %s.", image_id, filename)
+        if mapping_format == "json":
+            append_to_json_mapping(
+                save_dir=save_dir,
+                keys=[slidescore_url, str(study_id), "slide_filename_to_study_image_id_mapping", str(image_id)],
+                value=image_name,
+            )
+        elif mapping_format == "tsv":
+            append_to_tsv_mapping(
+                save_dir=save_dir,
+                items=[str(image_id), image_name],
+            )
 
-        logger.info("Downloading image for id: %s", image_id)
-        filename = client.download_slide(study_id, image, save_dir=save_dir)
-        logger.info("Image with id %s has been saved to %s.", image_id, filename)
-        append_to_manifest(
-            save_dir=save_dir,
-            keys=[slidescore_url, str(study_id), "slide_filename_to_study_image_id_mapping", filename.name],
-            value=image_id,
-        )
+
+def _download_mapping(args: argparse.Namespace):
+    """Main function that downloads only the mapping from filename to slidescore slide ID
+
+    Calls _download_wsi while setting `disable_download=True`
+    """
+    _download_wsi(args=args, disable_download=True)
 
 
-def _download_wsi(args: argparse.Namespace):
+def _download_wsi(args: argparse.Namespace, disable_download=False):
     """Main function that downloads WSIs from SlideScore.
 
     Parameters
     ----------
     args: argparse.Namespace
         The arguments passed from the CLI. Run with `-h` to see the required parameters
+    disable_download: bool
+        If download is disabled, only the mapping is saved. Can also be used to debug.
 
     Returns
     -------
@@ -497,6 +556,8 @@ def _download_wsi(args: argparse.Namespace):
         args.study_id,
         args.output_dir,
         disable_certificate_check=args.disable_certificate_check,
+        disable_download=disable_download,
+        mapping_format=args.mapping_format,
     )
 
 
@@ -512,6 +573,43 @@ def register_parser(parser: argparse._SubParsersAction):
     )
 
     download_wsi_parser.set_defaults(subcommand=_download_wsi)
+
+    download_wsi_parser.add_argument(
+        "--mapping-format",
+        dest="mapping_format",
+        type=str,
+        help="Save mapping as either json or tsv",
+        choices=["tsv", "json"],
+        required=False,
+        default="tsv",
+    )
+
+    download_mapping_parser = parser.add_parser(
+        "download-study-slide-mapping",
+        help="Download the download_config.json"
+        " with url, study id, and file to "
+        "slidescore ID mapping from SlideScore"
+        " without downloading the WSIs. "
+        "Useful if slides are already on disk,"
+        "but slidescore information is not",
+    )
+    download_mapping_parser.add_argument(
+        "output_dir",
+        type=pathlib.Path,
+        help="Directory to save output too.",
+    )
+
+    download_mapping_parser.add_argument(
+        "--mapping-format",
+        dest="mapping_format",
+        type=str,
+        help="Save mapping as either json or tsv",
+        choices=["tsv", "json"],
+        required=False,
+        default="tsv",
+    )
+
+    download_mapping_parser.set_defaults(subcommand=_download_mapping)
 
     download_label_parser = parser.add_parser("download-labels", help="Download labels from SlideScore.")
     download_label_parser.add_argument(

@@ -383,36 +383,37 @@ def append_to_tsv_mapping(save_dir: pathlib.Path, items: List[str]) -> None:
         file.write(f"{tab.join(items)}\n")
 
 
-def append_to_json_mapping(save_dir: pathlib.Path, keys: List[str], value: Union[pathlib.Path, int, str]) -> None:
+def append_to_json_mapping(
+    save_dir: pathlib.Path,
+    keys: List[str],
+    value: Union[pathlib.Path, int, str],
+    filename: str = "slidescore_mapping.json",
+) -> None:
     """
     Generic method to append a hierarchical key structure with one value to a dictionary in a json file to fix
     missing functionality in python dict classes
-
-    Works as desired:
-    >> {}['a'] = 1
-    {'a': 1'}
-
-    Does not work as desired in this case
-    >> {}['a', 'b'] = 1
-    {('a', 'b'): 1}
-
-    The following is not possible in a python dict, and throws an error
-    >> {}[['a', 'b']] = 1
-    TypeError: unhashable type: 'list'
 
     We wish to get
     >> {}[['a', 'b']] = 1
     {'a': {'b': 1}}
 
-    Used to create a manifest mapping filename to slidescore ID Created when downloading WSIs from slidescores.
+    But this is not possible in a python dict, and throws an error
 
-    Will end up with something like
+    This function is used to create a slidescore_mapping.json file, mapping slidescore ID (unique) to image name,
+     created when downloading WSIs from slidescores, or when just creating the slidescore_mapping.
+
+    Will end up a file like
     {
-        'slidescore_url': str,
-        'slidescore_study_id': int,
-        'slide_filename_to_id_mapping': {
-            str: int
-            ...
+        "url": {
+            "study_id": {
+                "slidescore_url": "url",
+                "slidescore_study_id": study_id,
+                "slide_filename_to_study_image_id_mapping": {
+                    "image_id": "image_name",
+                    ...
+                    ...
+                }
+            }
         }
     }
 
@@ -423,6 +424,7 @@ def append_to_json_mapping(save_dir: pathlib.Path, keys: List[str], value: Union
         E.g. ['slide_filename_id_mapping', 'filename']
     sets manifest['slide_filename_id_mapping']['filename'] to the given slidescore ID
     value : Union[int, pathlib.Path, str], value to be set. Generally either a URL, a path, or an integer ID
+    filename : fileanme for json file
 
     Returns
     -------
@@ -433,7 +435,7 @@ def append_to_json_mapping(save_dir: pathlib.Path, keys: List[str], value: Union
         save_dir.mkdir(parents=True)
 
     value = value.name if isinstance(value, pathlib.Path) else value
-    config_filepath = save_dir / "slidescore_mapping.json"
+    config_filepath = save_dir / filename
 
     try:
         # Read file if it exists
@@ -457,7 +459,7 @@ def append_to_json_mapping(save_dir: pathlib.Path, keys: List[str], value: Union
         json.dump(obj, file, ensure_ascii=False, indent=4)
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, too-many-branches
 def download_wsis(
     slidescore_url: str,
     api_token: str,
@@ -493,7 +495,7 @@ def download_wsis(
     # Collect image metadata
     images = client.get_images(study_id)
 
-    # # Add study details to mapping manifest
+    # Add study details to mapping manifest
     if mapping_format == "json":
         append_to_json_mapping(
             save_dir=save_dir, keys=[slidescore_url, str(study_id), "slidescore_url"], value=slidescore_url
@@ -504,6 +506,8 @@ def download_wsis(
     elif mapping_format == "tsv":
         append_to_tsv_mapping(save_dir=save_dir, items=[f"# {slidescore_url}"])
         append_to_tsv_mapping(save_dir=save_dir, items=[f"# {study_id}"])
+    else:
+        raise ValueError(f"mapping_format should be either 'tsv' or 'json', but is {mapping_format}")
 
     # Download and save WSIs
     for image in tqdm(images):

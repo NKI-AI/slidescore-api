@@ -355,6 +355,39 @@ def _download_labels(args: argparse.Namespace) -> None:
     )
 
 
+def set_study_details_to_mapping(
+    save_dir: pathlib.Path, mapping_format: str, slidescore_url: str, study_id: int
+) -> None:
+    """
+    Sets the slidescore study details to the mapping file
+
+    Parameters
+    ----------
+
+    save_dir: pathlib.Path
+    mapping_format: str
+    slidesore_url: str
+    study_id: int
+
+    Returns
+    -------
+
+    None
+    """
+    if mapping_format == "json":
+        append_to_json_mapping(
+            save_dir=save_dir, keys=[slidescore_url, str(study_id), "slidescore_url"], value=slidescore_url
+        )
+        append_to_json_mapping(
+            save_dir=save_dir, keys=[slidescore_url, str(study_id), "slidescore_study_id"], value=study_id
+        )
+    elif mapping_format == "tsv":
+        append_to_tsv_mapping(save_dir=save_dir, items=[f"# {slidescore_url}"])
+        append_to_tsv_mapping(save_dir=save_dir, items=[f"# {study_id}"])
+    else:
+        raise ValueError(f"mapping_format should be either 'tsv' or 'json', but is {mapping_format}")
+
+
 def append_to_tsv_mapping(save_dir: pathlib.Path, items: List[str]) -> None:
     """
     Create a manifest mapping image id to image name
@@ -496,18 +529,9 @@ def download_wsis(
     images = client.get_images(study_id)
 
     # Add study details to mapping manifest
-    if mapping_format == "json":
-        append_to_json_mapping(
-            save_dir=save_dir, keys=[slidescore_url, str(study_id), "slidescore_url"], value=slidescore_url
-        )
-        append_to_json_mapping(
-            save_dir=save_dir, keys=[slidescore_url, str(study_id), "slidescore_study_id"], value=study_id
-        )
-    elif mapping_format == "tsv":
-        append_to_tsv_mapping(save_dir=save_dir, items=[f"# {slidescore_url}"])
-        append_to_tsv_mapping(save_dir=save_dir, items=[f"# {study_id}"])
-    else:
-        raise ValueError(f"mapping_format should be either 'tsv' or 'json', but is {mapping_format}")
+    set_study_details_to_mapping(
+        save_dir=save_dir, mapping_format=mapping_format, slidescore_url=slidescore_url, study_id=study_id
+    )
 
     # Download and save WSIs
     for image in tqdm(images):

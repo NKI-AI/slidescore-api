@@ -1,12 +1,14 @@
 # coding=utf-8
 """Utility file containing parsing modules and functions to save slidescore annotations."""
 
+# Can't find any duplicate code
+# pylint:disable=duplicate-code
 import json
 import logging
 import warnings
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, NamedTuple, TypedDict, Union
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, TypedDict, Union
 
 import numpy as np
 import shapely.errors
@@ -128,9 +130,13 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
 
             coords = annotations.annotation[ann_id]["points"]
             if isinstance(coords, (Polygon, MultiPolygon)) and coords.area == 0:
+                author = annotations.author
+                slide_name = annotations.slide_name
                 logger.warning(
-                    f"Dismissed polygon for {annotations.author} and {annotations.slide_name} because area = 0."
+                    "Dismissed polygon for %s because area = 0.",
+                    author,
                 )
+                logger.warning("^-- the above is related to %s", slide_name)
                 continue
             dump_list.append(coords)
         feature_collection = _to_geojson_format(
@@ -139,7 +145,10 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
         json.dump(feature_collection, file, indent=2)
 
 
-def _parse_brush_annotation(annotations: Dict) -> Dict:  # pylint:disable=logging-fstring-interpolation
+# pylint:disable=logging-fstring-interpolation, too-many-branches
+def _parse_brush_annotation(
+    annotations: Dict,
+) -> Dict:
     """
 
     Parameters
@@ -338,7 +347,7 @@ class SlideScoreAnnotations:
         try:
             ann = json.loads(_row["Answer"])
             if len(ann) > 0:
-                # Points dont have type, only x,y; so we use that to distinguish task
+                # Points don't have type, only x,y; so we use that to distinguish task
                 # Code can be shortened, but is more readable this way
                 if "type" in ann[0]:
                     label_type = "segmentation"
@@ -386,9 +395,9 @@ class SlideScoreAnnotations:
     def from_iterable(
         self,
         row_iterator: Iterable,
-        filter_author: str = None,
-        filter_label: str = None,
-        filter_empty=True,
+        filter_author: Optional[str] = None,
+        filter_label: Optional[str] = None,
+        filter_empty: bool = True,
     ) -> Iterable:
         """
         Function to convert slidescore annotations (txt file) to an iterable.
@@ -410,7 +419,7 @@ class SlideScoreAnnotations:
         row_iterator: Iterable
             An iterable object that holds a single row of annotations and attributes.
         filter_empty: bool
-            A binary flag to indicate whether or not empty rows must be filtered.
+            A binary flag to indicate whether empty rows must be filtered.
         filter_author: str
             Email-like string to look for annotations corresponding to a particular annotation author.
         filter_label:

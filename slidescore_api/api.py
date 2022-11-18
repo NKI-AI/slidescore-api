@@ -2,6 +2,8 @@
 # Copyright (c) slidescore_api contributors
 """Main module containing the SlideScore API wrapper."""
 
+# Can't find any duplicate code
+# pylint:disable=duplicate-code
 import io
 import json
 import logging
@@ -45,7 +47,7 @@ class SlideScoreResult:
     # pylint: disable=too-many-instance-attributes
     """Slidescore wrapper class for storing SlideScore server responses."""
 
-    def __init__(self, slide_dict: Dict = None):
+    def __init__(self, slide_dict: Optional[Dict] = None):
         """
         Parameters
         ----------
@@ -446,7 +448,7 @@ class APIClient:
         Gets tile from WSI for given magnification level.
         A WSI at any given magnification level is converted into an x by y tile matrix. This method downloads the tile
         at col (x) and row (y) only as jpeg. Maximum magnification level can be calculated as follows:
-        max_level = int(np.ceil(math.log(max_dim, 2))), where max_dim is is the maximum of either height or width
+        max_level = int(np.ceil(math.log(max_dim, 2))), where max_dim is the maximum of either height or width
         of the slide. This can be requested by calling get_image_metadata.
 
         Parameters

@@ -188,7 +188,7 @@ def _parse_brush_annotation(annotations: Dict) -> Dict:  # pylint:disable=loggin
             f"Areas   :{[negative_polygons[nidx].area for nidx, val in used_negatives.items() if not val]}.\n"
         )
     if len(polygons) == 1:
-        points = Polygon(polygons)
+        points = Polygon(polygons[0])
     else:
         points = MultiPolygon(polygons)
     data = {

@@ -12,6 +12,7 @@ import numpy as np
 import shapely.errors
 import shapely.validation
 from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box, mapping
+import shapely.affinity
 
 logger = logging.getLogger(__name__)
 
@@ -228,17 +229,24 @@ def _parse_ellipse_annotation(annotations: Dict) -> Dict:
     if (annotations["center"]["x"] is not None) & (annotations["center"]["y"] is not None):
         center = np.array([annotations["center"]["x"], annotations["center"]["y"]], dtype=np.float32)
         size = np.array([annotations["size"]["x"], annotations["size"]["y"]], dtype=np.float32)
+
+        angle = 0
+        circle = Point(center).buffer(1)
+        ellipse = shapely.affinity.scale(circle, *size)
+
+        if angle != 0:
+            ellipse = shapely.affinity.rotate(ellipse, angle)
+
         data = {
             "type": "ellipse",
-            "center": Point(center),
-            "size": Point(size),
+            "points": MultiPolygon([ellipse]),
         }
+
     else:
-        warnings.warn(f"Invalid ellipse: {annotations['center'], annotations['size']}, adding as -1.")
+        warnings.warn(f"Invalid ellipse: {annotations['center'], annotations['size']}.")
         data = {
             "type": "ellipse",
-            "center": Point(-1, -1),
-            "size": Point(-1, -1),
+            "points:" MultiPolygon([]),
         }
     return data
 

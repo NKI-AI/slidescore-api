@@ -115,14 +115,16 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
     """
     save_path = save_dir / annotations.author / annotations.ImageID
     save_path.mkdir(parents=True, exist_ok=True)
+
+    if AnnotationType[annotations.annotation[0]["type"].upper()] == AnnotationType.COMMENT:
+        # Skipping this annotation as it is a comment
+        return
+
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
         for ann_id, _ in enumerate(annotations.annotation):
             # rects and ellipses are internally polygons
             annotation_type = AnnotationType[annotations.annotation[ann_id]["type"].upper()]
-            if annotation_type == AnnotationType.COMMENT:
-                warnings.warn("Annotation comment. Skipping.")
-                continue
 
             is_polygon = annotation_type in (
                 AnnotationType.POLYGON,

@@ -246,7 +246,7 @@ def _parse_ellipse_annotation(annotations: Dict) -> Dict:
         warnings.warn(f"Invalid ellipse: {annotations['center'], annotations['size']}.")
         data = {
             "type": "ellipse",
-            "points:" MultiPolygon([]),
+            "points:": MultiPolygon([]),
         }
     return data
 
@@ -342,6 +342,14 @@ class SlideScoreAnnotations:
 
     def _parse_annotation_row(self, row, filter_empty):  # pylint:disable=too-many-branches
         _row = dict(zip(self._headers, row.split("\t")))
+
+        if not (_row["Answer"].startswith("[") or _row["Answer"].startswith("{")):
+            if len(_row["Answer"]) > 0:
+                data = {0: {"type": "comment", "text": _row["Answer"]}}
+            elif filter_empty:
+                return None
+            return _row, data
+
         data = {}
         try:
             ann = json.loads(_row["Answer"])

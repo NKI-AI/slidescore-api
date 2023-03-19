@@ -56,6 +56,7 @@ class AnnotationType(Enum):
     BRUSH: str = "brush"
     HEATMAP: str = "heatmap"
     POINTS: str = "points"
+    COMMENT: str = "comment"
 
 
 def _to_geojson_format(list_of_points: list, last_modified_on: str, label: str) -> GeoJsonDict:
@@ -117,13 +118,18 @@ def save_shapely(annotations: ImageAnnotation, save_dir: Path) -> None:  # pylin
     with open(save_path / (annotations.label + ".json"), "w", encoding="utf-8") as file:
         dump_list: list = []
         for ann_id, _ in enumerate(annotations.annotation):
-            # rects are internally polygons
+            # rects and ellipses are internally polygons
             annotation_type = AnnotationType[annotations.annotation[ann_id]["type"].upper()]
+            if annotation_type == AnnotationType.COMMENT:
+                warnings.warn("Annotation comment. Skipping.")
+                continue
+
             is_polygon = annotation_type in (
                 AnnotationType.POLYGON,
                 AnnotationType.BRUSH,
                 AnnotationType.RECT,
             )
+
             if not is_polygon and annotation_type != AnnotationType.POINTS:
                 raise RuntimeError(f"Annotation type {annotation_type} is not supported.")
 
@@ -238,14 +244,14 @@ def _parse_ellipse_annotation(annotations: Dict) -> Dict:
             ellipse = shapely.affinity.rotate(ellipse, angle)
 
         data = {
-            "type": "ellipse",
+            "type": "polygon",
             "points": MultiPolygon([ellipse]),
         }
 
     else:
         warnings.warn(f"Invalid ellipse: {annotations['center'], annotations['size']}.")
         data = {
-            "type": "ellipse",
+            "type": "polygon",
             "points:": MultiPolygon([]),
         }
     return data
@@ -443,6 +449,7 @@ class SlideScoreAnnotations:
                 self.num_empty += 1
                 continue
             _row, data = _return
+
             row_annotation = ImageAnnotation(
                 ImageID=_row["ImageID"],
                 lastModifiedOn=_row.get("lastModifiedOn", None),

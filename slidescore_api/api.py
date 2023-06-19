@@ -58,6 +58,7 @@ class SlideScoreResult:
             slide_dict = {
                 "imageID": 0,
                 "imageName": "",
+                "caseName":"",
                 "user": None,
                 "tmaRow": None,
                 "tmaCol": None,
@@ -70,6 +71,7 @@ class SlideScoreResult:
         self.image_id = int(slide_dict["imageID"])
         self.image_name = slide_dict["imageName"]
         self.user = slide_dict["user"]
+        self.case_name = slide_dict["caseName"] if "caseName" in slide_dict else ""
         self.tma_row = int(slide_dict["tmaRow"]) if "tmaRow" in slide_dict else None
         self.tma_col = int(slide_dict["tmaCol"]) if "tmaCol" in slide_dict else None
         self.tma_sample_id = slide_dict["tmaSampleID"] if "tmaSampleID" in slide_dict else ""

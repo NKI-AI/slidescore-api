@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import sys
 from collections import defaultdict
 from enum import Enum
@@ -375,6 +376,7 @@ def download_wsis(
     study_id: int,
     save_dir: pathlib.Path,
     disable_certificate_check: bool = False,
+    regex: str = None,
 ) -> None:
     """
     Download all WSIs for a given study from SlideScore
@@ -386,6 +388,8 @@ def download_wsis(
     study_id : int
     save_dir : pathlib.Path
     disable_certificate_check : bool
+    regex: str
+        Regex to apply to the list of images in the given study
 
     Returns
     -------
@@ -399,6 +403,12 @@ def download_wsis(
     # Collect image metadata
     images = client.get_images(study_id)
 
+    # This call doesn't have a regex filter and will return all images
+    if regex is not None:
+        pattern = re.compile(regex)
+        images = [item for item in images if pattern.match(item["name"])]
+
+    logger.info("Found %s images.", len(images))
     # Download and save WSIs
     for image in tqdm(images):
         image_id = image["id"]
@@ -429,6 +439,7 @@ def _download_wsi(args: argparse.Namespace):
         args.study_id,
         args.output_dir,
         disable_certificate_check=args.disable_certificate_check,
+        regex=args.regex,
     )
 
 
@@ -442,7 +453,7 @@ def register_parser(parser: argparse._SubParsersAction):
         type=pathlib.Path,
         help="Directory to save output too.",
     )
-
+    download_wsi_parser.add_argument("--regex", default=None, help="Regex to apply to the list of images in the given study. For instance '^T' will only download images starting with a T.")
     download_wsi_parser.set_defaults(subcommand=_download_wsi)
 
     download_label_parser = parser.add_parser("download-labels", help="Download labels from SlideScore.")
